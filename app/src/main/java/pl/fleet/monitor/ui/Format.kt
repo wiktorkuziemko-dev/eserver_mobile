@@ -36,6 +36,18 @@ object Fmt {
         return if (l.toLocalDate() == LocalDate.now()) l.format(timeFmt) else l.format(shortDayFmt) + " " + l.format(timeFmt)
     }
 
+    /** „Dzisiaj, 16:32:22”, „Wczoraj, 08:05:10” albo „27.10.2026, 16:32:22”. */
+    fun stamp(t: ZonedDateTime?): String {
+        if (t == null) return "—"
+        val l = local(t)
+        val day = when (l.toLocalDate()) {
+            LocalDate.now() -> "Dzisiaj"
+            LocalDate.now().minusDays(1) -> "Wczoraj"
+            else -> l.format(dateFmt)
+        }
+        return "$day, ${l.format(timeSecFmt)}"
+    }
+
     fun ago(t: ZonedDateTime?, now: ZonedDateTime = ZonedDateTime.now()): String {
         if (t == null) return "brak danych"
         val s = Duration.between(t, now).seconds

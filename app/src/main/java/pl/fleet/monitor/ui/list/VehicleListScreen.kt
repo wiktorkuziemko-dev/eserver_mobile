@@ -65,7 +65,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
             value = ui.query,
             onValueChange = vm::setQuery,
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
-            placeholder = { Text("Szukaj: nr rejestracyjny, nazwa, nr GPS") },
+            placeholder = { Text("Szukaj: nazwa, nr rejestracyjny, nr nadajnika") },
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
             trailingIcon = {
                 if (ui.query.isNotEmpty()) IconButton(onClick = { vm.setQuery("") }) { Icon(Icons.Outlined.Clear, "Wyczyść") }
@@ -138,14 +138,20 @@ private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Uni
         Box(Modifier.width(5.dp).fillMaxHeight().background(stateGradient(v.state.color)))
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
+                // Nazwa pojazdu jak na mapie, pod nią numer nadajnika
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(v.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        v.displayName.ifBlank { v.label },
+                        Modifier.weight(1f, fill = false),
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
                     Spacer(Modifier.width(8.dp))
                     StateBadge(v.state)
                 }
-                if (v.displayName != v.label) {
+                if (v.serial.isNotBlank()) {
                     Text(
-                        v.displayName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        "Nr nadajnika: ${v.serial}", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

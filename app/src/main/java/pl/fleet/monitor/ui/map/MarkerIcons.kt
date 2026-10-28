@@ -27,6 +27,9 @@ class MarkerIcons(private val context: Context) {
     data class Icon(val drawable: BitmapDrawable, val anchorY: Float)
 
     private val cache = HashMap<String, Icon>()
+
+    /** Kolor zaznaczenia – granat, dobrze odróżnia się od zielonego i pomarańczowego. */
+    private val SELECTED = 0xFF1E3A8A.toInt()
     private val density = context.resources.displayMetrics.density
 
     /** Sylwetka samochodu (Material „directions_car”), układ 24×24. */
@@ -78,7 +81,7 @@ class MarkerIcons(private val context: Context) {
         c.restore()
         c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE; strokeWidth = outline * 2; strokeJoin = Paint.Join.ROUND
-            color = if (selected) 0xFFD32F2F.toInt() else android.graphics.Color.WHITE
+            color = if (selected) SELECTED else android.graphics.Color.WHITE
         })
         c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = LinearGradient(
@@ -101,7 +104,7 @@ class MarkerIcons(private val context: Context) {
         val r = 6f * d
         c.drawRoundRect(RectF(rect).apply { offset(0f, 1f * d) }, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33000000 })
         c.drawRoundRect(rect, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (selected) 0xFFD32F2F.toInt() else android.graphics.Color.WHITE
+            color = if (selected) SELECTED else android.graphics.Color.WHITE
         })
         if (!selected) {
             c.drawRoundRect(rect, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply {

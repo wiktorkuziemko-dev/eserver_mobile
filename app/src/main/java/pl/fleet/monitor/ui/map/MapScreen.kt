@@ -114,7 +114,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        ui.lastRefresh?.let { Fmt.timeSec(it) } ?: "…",
+                        ui.lastRefresh?.let { Fmt.stamp(it) } ?: "…",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                     )

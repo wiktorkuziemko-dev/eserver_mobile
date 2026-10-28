@@ -18,7 +18,10 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-enum class RangePreset(val label: String) { TODAY("Dziś"), YESTERDAY("Wczoraj"), WEEK("7 dni"), MONTH("30 dni"), CUSTOM("Zakres…") }
+/** Maksymalna długość okresu historii (w dniach). */
+const val MAX_DAYS = 14
+
+enum class RangePreset(val label: String) { TODAY("Dziś"), YESTERDAY("Wczoraj"), WEEK("7 dni"), TWO_WEEKS("14 dni"), CUSTOM("Zakres…") }
 
 data class DayGroup(
     val date: LocalDate,
@@ -65,7 +68,7 @@ class HistoryViewModel(app: Application, private val serial: String) : AndroidVi
             RangePreset.TODAY -> today to today
             RangePreset.YESTERDAY -> today.minusDays(1) to today.minusDays(1)
             RangePreset.WEEK -> today.minusDays(6) to today
-            RangePreset.MONTH -> today.minusDays(29) to today
+            RangePreset.TWO_WEEKS -> today.minusDays(MAX_DAYS - 1L) to today
             RangePreset.CUSTOM -> return
         }
         _ui.update { it.copy(preset = p, from = from, to = to) }
@@ -73,7 +76,10 @@ class HistoryViewModel(app: Application, private val serial: String) : AndroidVi
     }
 
     fun setCustomRange(from: LocalDate, to: LocalDate) {
-        _ui.update { it.copy(preset = RangePreset.CUSTOM, from = minOf(from, to), to = maxOf(from, to)) }
+        val end = maxOf(from, to)
+        // Serwer prezentuje dane maksymalnie z 14 dni – dłuższy zakres przycinamy.
+        val start = maxOf(minOf(from, to), end.minusDays(MAX_DAYS - 1L))
+        _ui.update { it.copy(preset = RangePreset.CUSTOM, from = start, to = end) }
         load()
     }
 

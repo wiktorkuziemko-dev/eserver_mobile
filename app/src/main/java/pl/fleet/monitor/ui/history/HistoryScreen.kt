@@ -138,11 +138,15 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
                 override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= LocalDate.now().toEpochMillis()
             },
         )
+        val startSel = state.selectedStartDateMillis?.toLocalDate()
+        val endSel = state.selectedEndDateMillis?.toLocalDate() ?: startSel
+        val days = if (startSel != null && endSel != null) java.time.temporal.ChronoUnit.DAYS.between(startSel, endSel) + 1 else 0
+        val tooLong = days > MAX_DAYS
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
             confirmButton = {
                 TextButton(
-                    enabled = state.selectedStartDateMillis != null,
+                    enabled = startSel != null && !tooLong,
                     onClick = {
                         val start = state.selectedStartDateMillis!!.toLocalDate()
                         val end = state.selectedEndDateMillis?.toLocalDate() ?: start
@@ -154,7 +158,16 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
             dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Anuluj") } },
         ) {
             DateRangePicker(state = state, modifier = Modifier.weight(1f), title = {
-                Text("Wybierz zakres dat", Modifier.padding(start = 24.dp, top = 16.dp))
+                Column(Modifier.padding(start = 24.dp, top = 16.dp, end = 12.dp)) {
+                    Text("Wybierz zakres dat (maks. $MAX_DAYS dni)")
+                    if (tooLong) {
+                        Text(
+                            "Wybrany okres ma $days dni – skróć go do $MAX_DAYS dni.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
             })
         }
     }

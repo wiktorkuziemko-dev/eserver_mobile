@@ -73,8 +73,8 @@ enum class Ignition { ON, OFF, UNKNOWN;
     }
 }
 
-/** Uproszczony stan pojazdu wyliczany na podstawie zapłonu i prędkości. */
-enum class VehicleState { DRIVING, IDLE, PARKED, UNKNOWN }
+/** Stan pojazdu: jedzie albo stoi (każdy pojazd, który nie jedzie, jest zaparkowany). */
+enum class VehicleState { DRIVING, PARKED }
 
 data class Vehicle(
     val deviceId: String,
@@ -92,17 +92,17 @@ data class Vehicle(
     val hasPosition: Boolean get() = latitude != null && longitude != null
 
     val state: VehicleState
-        get() = when {
-            !hasPosition -> VehicleState.UNKNOWN
-            ignition == Ignition.ON && speed > 0 -> VehicleState.DRIVING
-            ignition == Ignition.UNKNOWN && speed > 0 -> VehicleState.DRIVING
-            ignition == Ignition.ON -> VehicleState.IDLE
-            ignition == Ignition.OFF -> VehicleState.PARKED
-            else -> VehicleState.UNKNOWN
-        }
+        get() = if (speed > 0 && ignition != Ignition.OFF) VehicleState.DRIVING else VehicleState.PARKED
 
     /** Etykieta do wyświetlania – numer rejestracyjny, a gdy go brak – nazwa. */
-    val label: String get() = plateNo.ifBlank { name.ifBlank { serial } }
+    val label: String get() = plateNo.ifBlank { displayName.ifBlank { serial } }
+
+    /** Nazwa pojazdu bez numeru nadajnika GPS (API skleja go w deviceName: „model marka nr nr_rej.”). */
+    val displayName: String
+        get() {
+            val cleaned = if (serial.isBlank()) name else name.replace(serial, " ")
+            return cleaned.replace(Regex("\\s+"), " ").trim().ifBlank { plateNo }
+        }
 }
 
 /** Wynik funkcji [status] – aktywność pojazdu w danym momencie. */

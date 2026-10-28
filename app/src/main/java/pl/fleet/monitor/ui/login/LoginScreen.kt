@@ -26,7 +26,12 @@ import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import pl.fleet.monitor.ui.components.GradientButton
+import pl.fleet.monitor.ui.components.StatusBarIcons
+import pl.fleet.monitor.ui.theme.BrandGradient
+import pl.fleet.monitor.ui.theme.SoftBackground
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -58,29 +63,40 @@ fun LoginScreen(vm: LoginViewModel) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
-    Box(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding().imePadding(),
-        contentAlignment = Alignment.Center,
-    ) {
+    StatusBarIcons(white = true)
+    Box(Modifier.fillMaxSize().background(SoftBackground)) {
+        // Nagłówek z gradientem marki
+        Box(
+            Modifier.fillMaxWidth().height(340.dp)
+                .background(BrandGradient, RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp)),
+        )
+      Box(Modifier.fillMaxSize().systemBarsPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
         Column(
             Modifier.widthIn(max = 460.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
-                Modifier.size(88.dp).background(MaterialTheme.colorScheme.primary, CircleShape),
+                Modifier.padding(top = 24.dp).size(84.dp).background(Color.White, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.LocalShipping, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(Icons.Outlined.LocalShipping, null, Modifier.size(46.dp), tint = MaterialTheme.colorScheme.primary)
             }
-            Spacer(Modifier.height(16.dp))
-            Text("E-SERVER PRO", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(14.dp))
+            Text("E-SERVER PRO", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = Color.White)
             Text(
                 "Zaloguj się danymi konta platformy E-SERVER",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.85f),
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
+
+          Card(
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+              elevation = CardDefaults.cardElevation(8.dp),
+              shape = RoundedCornerShape(24.dp),
+          ) {
+            Column(Modifier.padding(20.dp)) {
 
             OutlinedTextField(
                 value = ui.login,
@@ -147,13 +163,15 @@ fun LoginScreen(vm: LoginViewModel) {
             }
 
             Spacer(Modifier.height(8.dp))
-            Button(onClick = vm::submit, enabled = ui.canSubmit, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+            GradientButton(onClick = vm::submit, enabled = ui.canSubmit, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 if (ui.loading) {
-                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = Color.White)
                 } else {
-                    Text("Zaloguj się", style = MaterialTheme.typography.titleMedium)
+                    Text("Zaloguj się", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
+            }
+          }
             Spacer(Modifier.height(24.dp))
             Text(
                 "Dostęp do API musi być aktywowany na koncie przez operatora platformy.",
@@ -162,5 +180,6 @@ fun LoginScreen(vm: LoginViewModel) {
                 textAlign = TextAlign.Center,
             )
         }
+      }
     }
 }

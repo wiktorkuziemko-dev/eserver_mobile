@@ -161,7 +161,7 @@ private fun TypeToggle(
     checked: Boolean,
     onClick: () -> Unit,
 ) {
-    val bg = if (checked) color else MaterialTheme.colorScheme.surface
+    val bg = if (checked) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface
     val fg = if (checked) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         onClick = onClick,
@@ -171,7 +171,12 @@ private fun TypeToggle(
         border = BorderStroke(1.5.dp, if (checked) androidx.compose.ui.graphics.Color.White else color.copy(alpha = 0.6f)),
         modifier = Modifier.semantics { stateDescription = if (checked) "pokazane" else "ukryte" },
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .then(if (checked) Modifier.background(pl.fleet.monitor.ui.theme.stateGradient(color)) else Modifier)
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(icon, null, Modifier.size(18.dp), tint = if (checked) fg else color)
             Spacer(Modifier.width(6.dp))
             Text(label, color = fg, style = MaterialTheme.typography.labelLarge)
@@ -191,8 +196,8 @@ private fun VehiclePreviewCard(v: Vehicle, onClose: () -> Unit, onDetails: () ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(v.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    if (v.name.isNotBlank()) {
-                        Text(v.name, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    if (v.displayName != v.label) {
+                        Text(v.displayName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

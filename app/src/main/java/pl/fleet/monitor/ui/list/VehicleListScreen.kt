@@ -21,7 +21,15 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import pl.fleet.monitor.ui.color
+import pl.fleet.monitor.ui.theme.stateGradient
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -119,7 +127,15 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
 
 @Composable
 private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Unit, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(1.dp),
+    ) {
+      Row(Modifier.height(IntrinsicSize.Min)) {
+        // Pasek koloru stanu z gradientem
+        Box(Modifier.width(5.dp).fillMaxHeight().background(stateGradient(v.state.color)))
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -127,9 +143,9 @@ private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Uni
                     Spacer(Modifier.width(8.dp))
                     StateBadge(v.state)
                 }
-                if (v.name.isNotBlank()) {
+                if (v.displayName != v.label) {
                     Text(
-                        v.name, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        v.displayName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -148,6 +164,7 @@ private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Uni
                 Text("Pokazuj na mapie", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+      }
     }
 }
 

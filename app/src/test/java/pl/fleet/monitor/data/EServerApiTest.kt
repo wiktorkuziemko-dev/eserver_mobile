@@ -53,7 +53,8 @@ class EServerApiTest {
         assertEquals(319, ford.heading)
         assertEquals(211873L, ford.mileage)
         assertEquals(ZonedDateTime.of(2024, 1, 23, 17, 24, 13, 0, ZoneOffset.UTC).toInstant(), ford.lastPositionTime!!.toInstant())
-        assertEquals(VehicleState.UNKNOWN, vehicles.first { it.deviceId == "x2" }.state)
+        assertEquals(VehicleState.PARKED, vehicles.first { it.deviceId == "x2" }.state)
+        assertEquals("Ford Focus MK IV ZS 514PV", ford.displayName)
 
         val req = server.takeRequest()
         assertEquals("POST", req.method)
@@ -119,9 +120,10 @@ class EServerApiTest {
     @Test fun `vehicle state rules`() {
         fun v(ign: Ignition, speed: Int) = Vehicle("i", "", "", "", 1.0, 1.0, 0, speed, ign, null, null)
         assertEquals(VehicleState.DRIVING, v(Ignition.ON, 10).state)
-        assertEquals(VehicleState.IDLE, v(Ignition.ON, 0).state)
+        assertEquals(VehicleState.PARKED, v(Ignition.ON, 0).state)
         assertEquals(VehicleState.PARKED, v(Ignition.OFF, 0).state)
-        assertEquals(VehicleState.UNKNOWN, v(Ignition.UNKNOWN, 0).state)
+        assertEquals(VehicleState.PARKED, v(Ignition.UNKNOWN, 0).state)
+        assertEquals(VehicleState.DRIVING, v(Ignition.UNKNOWN, 5).state)
     }
 
     @Test fun `history details encoded as object and empty data array`() = runTest {

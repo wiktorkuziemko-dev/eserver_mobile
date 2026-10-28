@@ -15,7 +15,7 @@ import org.osmdroid.views.overlay.Overlay
 class PulseOverlay(density: Float, color: Int) : Overlay() {
     var points: List<GeoPoint> = emptyList()
 
-    private val baseRadius = 14f * density
+    private val baseRadius = 15f * density
     private val maxGrow = 16f * density
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.FILL }
     private val point = Point()

@@ -92,24 +92,18 @@ object Fmt {
 
 val VehicleState.label: String
     get() = when (this) {
-        VehicleState.DRIVING -> "W trasie"
-        VehicleState.IDLE -> "Postój, zapłon wł."
-        VehicleState.PARKED -> "Postój"
-        VehicleState.UNKNOWN -> "Brak danych"
+        VehicleState.DRIVING -> "W ruchu"
+        VehicleState.PARKED -> "Zaparkowany"
     }
 
 val VehicleState.shortLabel: String
     get() = when (this) {
-        VehicleState.DRIVING -> "Jazda"
-        VehicleState.IDLE -> "Zapłon wł."
-        VehicleState.PARKED -> "Postój"
-        VehicleState.UNKNOWN -> "Brak danych"
+        VehicleState.DRIVING -> "W ruchu"
+        VehicleState.PARKED -> "Zaparkowany"
     }
 
 val VehicleState.color: Color
     get() = when (this) {
-        VehicleState.DRIVING -> Color(0xFF2E7D32)
-        VehicleState.IDLE -> Color(0xFFEF8F00)
-        VehicleState.PARKED -> Color(0xFF1565C0)
-        VehicleState.UNKNOWN -> Color(0xFF8E8E8E)
+        VehicleState.DRIVING -> Color(0xFF2E9E44)
+        VehicleState.PARKED -> Color(0xFFF59300)
     }

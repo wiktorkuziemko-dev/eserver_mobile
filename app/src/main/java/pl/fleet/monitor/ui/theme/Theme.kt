@@ -39,3 +39,18 @@ private val Colors = lightColorScheme(
 fun FleetTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = Colors, content = content)
 }
+
+/** Główny gradient marki – paski górne, przyciski, nagłówki. */
+val BrandGradient = androidx.compose.ui.graphics.Brush.linearGradient(
+    listOf(Color(0xFFEF5350), Color(0xFFD32F2F), Color(0xFFA31515)),
+)
+
+/** Subtelny gradient tła ekranów. */
+val SoftBackground = androidx.compose.ui.graphics.Brush.verticalGradient(
+    listOf(Color(0xFFFFF5F4), Color(0xFFF7F7F8)),
+)
+
+/** Gradient dla koloru stanu (jaśniejszy u góry, ciemniejszy u dołu). */
+fun stateGradient(base: Color) = androidx.compose.ui.graphics.Brush.verticalGradient(
+    listOf(androidx.compose.ui.graphics.lerp(base, Color.White, 0.18f), androidx.compose.ui.graphics.lerp(base, Color.Black, 0.12f)),
+)

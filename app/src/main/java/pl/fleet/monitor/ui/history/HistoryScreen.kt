@@ -58,6 +58,7 @@ import pl.fleet.monitor.data.VehicleState
 import pl.fleet.monitor.ui.Fmt
 import pl.fleet.monitor.ui.color
 import pl.fleet.monitor.ui.components.ErrorState
+import pl.fleet.monitor.ui.components.GradientTopBar
 import pl.fleet.monitor.ui.components.InfoTile
 import java.time.Instant
 import java.time.LocalDate
@@ -76,14 +77,10 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Historia tras", fontWeight = FontWeight.Bold)
-                        Text(vehicleLabel, style = MaterialTheme.typography.bodySmall)
-                    }
-                },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wstecz") } },
+            GradientTopBar(
+                title = "Historia tras",
+                subtitle = vehicleLabel,
+                onBack = onBack,
                 actions = {
                     IconButton(
                         enabled = ui.summary?.entries?.isNotEmpty() == true,
@@ -202,7 +199,9 @@ private fun HistoryContent(ui: HistoryUiState) {
 @Composable
 private fun DayHeader(day: DayGroup) {
     Row(
-        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surface)))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

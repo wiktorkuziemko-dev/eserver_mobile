@@ -1,5 +1,6 @@
 package pl.fleet.monitor.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,13 +46,18 @@ fun SettingsScreen(vm: FleetViewModel, modifier: Modifier = Modifier) {
         Text("Ustawienia", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
         SectionTitle("Konto")
-        Card(Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.AccountCircle, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+        Card(Modifier.fillMaxWidth(), shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
+            Row(
+                Modifier.fillMaxWidth().background(pl.fleet.monitor.ui.theme.BrandGradient).padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.AccountCircle, null, Modifier.size(44.dp), tint = androidx.compose.ui.graphics.Color.White)
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(creds?.login.orEmpty(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(vm.session.baseUrl, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(creds?.login.orEmpty(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        color = androidx.compose.ui.graphics.Color.White)
+                    Text(vm.session.baseUrl, style = MaterialTheme.typography.bodySmall,
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
                 }
             }
         }
@@ -75,10 +81,8 @@ fun SettingsScreen(vm: FleetViewModel, modifier: Modifier = Modifier) {
                     Spacer(Modifier.size(8.dp))
                     Text(
                         when (s) {
-                            pl.fleet.monitor.data.VehicleState.DRIVING -> "zapłon włączony, prędkość > 0"
-                            pl.fleet.monitor.data.VehicleState.IDLE -> "zapłon włączony, pojazd stoi"
-                            pl.fleet.monitor.data.VehicleState.PARKED -> "zapłon wyłączony"
-                            pl.fleet.monitor.data.VehicleState.UNKNOWN -> "brak pozycji lub stanu zapłonu"
+                            pl.fleet.monitor.data.VehicleState.DRIVING -> "pojazd jedzie (prędkość > 0)"
+                            pl.fleet.monitor.data.VehicleState.PARKED -> "pojazd stoi"
                         },
                         style = MaterialTheme.typography.bodySmall,
                     )

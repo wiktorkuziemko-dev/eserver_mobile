@@ -73,6 +73,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.ui.Fmt
 import pl.fleet.monitor.ui.color
+import pl.fleet.monitor.ui.components.GradientButton
+import pl.fleet.monitor.ui.components.GradientTopBar
 import pl.fleet.monitor.ui.components.InfoTile
 import pl.fleet.monitor.ui.components.SectionTitle
 import pl.fleet.monitor.ui.components.StateBadge
@@ -95,14 +97,10 @@ fun VehicleDetailsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(vehicle.label, fontWeight = FontWeight.Bold)
-                        if (vehicle.name.isNotBlank()) Text(vehicle.name, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                    }
-                },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wstecz") } },
+            GradientTopBar(
+                title = vehicle.label,
+                subtitle = vehicle.displayName.takeIf { it != vehicle.label },
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = { onRefresh(); vm.load() }) { Icon(Icons.Outlined.Refresh, "Odśwież") }
                 },
@@ -175,7 +173,7 @@ fun VehicleDetailsScreen(
             }
 
             Spacer(Modifier.size(20.dp))
-            Button(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
+            GradientButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Outlined.History, null); Spacer(Modifier.width(8.dp)); Text("Historia tras")
             }
             Spacer(Modifier.size(8.dp))

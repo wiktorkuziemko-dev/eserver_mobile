@@ -3,19 +3,24 @@ package pl.fleet.monitor.ui.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.PathParser
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.data.VehicleState
 import pl.fleet.monitor.ui.color
 
 /**
- * Rysuje ikonę pojazdu: kółko w kolorze stanu (ze strzałką kierunku podczas jazdy)
- * oraz etykietę z numerem rejestracyjnym pod spodem.
+ * Rysuje znacznik pojazdu: samochód (widok z przodu) w kolorze stanu – zielony w ruchu,
+ * pomarańczowy na postoju – z białym obrysem oraz etykietę z nazwą pojazdu pod spodem.
  */
 class MarkerIcons(private val context: Context) {
 
@@ -24,80 +29,89 @@ class MarkerIcons(private val context: Context) {
     private val cache = HashMap<String, Icon>()
     private val density = context.resources.displayMetrics.density
 
+    /** Sylwetka samochodu (Material „directions_car”), układ 24×24. */
+    private val carPath: Path = PathParser.createPathFromPathData(
+        "M18.92,6.01C18.72,5.42 18.16,5 17.5,5h-11c-0.66,0 -1.21,0.42 -1.42,1.01L3,12v8c0,0.55 0.45,1 1,1h1" +
+            "c0.55,0 1,-0.45 1,-1v-1h12v1c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1v-8l-2.08,-5.99z",
+    )
+    private val windshieldPath: Path = PathParser.createPathFromPathData("M5,11l1.5,-4.5h11L19,11z")
+
     fun get(v: Vehicle, selected: Boolean): Icon {
-        val heading = (v.heading / 10) * 10
-        val key = "${v.label}|${v.state}|$heading|$selected"
-        return cache.getOrPut(key) { draw(v.label, v.state, heading, selected) }
+        val label = v.displayName.ifBlank { v.label }
+        val key = "$label|${v.state}|$selected"
+        return cache.getOrPut(key) { draw(label, v.state, selected) }
     }
 
-    private fun draw(label: String, state: VehicleState, heading: Int, selected: Boolean): Icon {
+    private fun draw(label: String, state: VehicleState, selected: Boolean): Icon {
         val d = density
-        val radius = (if (selected) 17f else 14f) * d
-        val stroke = 2.5f * d
+        val carSize = (if (selected) 38f else 32f) * d
+        val outline = 2.5f * d
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 11f * d
+            textSize = 11.5f * d
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            color = android.graphics.Color.WHITE
+            color = if (selected) android.graphics.Color.WHITE else 0xFF212121.toInt()
         }
         val textW = textPaint.measureText(label)
-        val padH = 6f * d
-        val labelH = 18f * d
-        val gap = 3f * d
-        val width = maxOf(radius * 2 + stroke * 2, textW + padH * 2).toInt() + 2
-        val circleArea = radius * 2 + stroke * 2
-        val height = (circleArea + gap + labelH).toInt() + 2
+        val padH = 7f * d
+        val labelH = 20f * d
+        val gap = 1f * d
+        val carArea = carSize + outline * 2
+        val width = maxOf(carArea, textW + padH * 2 + 2 * d).toInt() + 2
+        val height = (carArea + gap + labelH + 2 * d).toInt() + 2
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val cx = width / 2f
-        val cy = stroke + radius
-        val stateColor = state.color.toArgb()
+        val carTop = outline
+        val base = state.color.toArgb()
 
-        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = stateColor }
-        val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; strokeWidth = stroke
-            color = if (selected) 0xFF212121.toInt() else android.graphics.Color.WHITE
-        }
-        val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33000000 }
-        c.drawCircle(cx, cy + d, radius + stroke / 2, shadow)
-        c.drawCircle(cx, cy, radius, fill)
-        c.drawCircle(cx, cy, radius, border)
+        // Skalowanie ścieżek 24×24 do rozmiaru znacznika
+        val scale = carSize / 24f
+        val m = Matrix().apply { setScale(scale, scale); postTranslate(cx - carSize / 2, carTop) }
+        val car = Path(carPath).apply { transform(m) }
+        val glass = Path(windshieldPath).apply { transform(m) }
 
-        val white = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
-        if (state == VehicleState.DRIVING) {
-            c.save()
-            c.rotate(heading.toFloat(), cx, cy)
-            val r = radius * 0.62f
-            val path = Path().apply {
-                moveTo(cx, cy - r)
-                lineTo(cx + r * 0.7f, cy + r * 0.75f)
-                lineTo(cx, cy + r * 0.35f)
-                lineTo(cx - r * 0.7f, cy + r * 0.75f)
-                close()
-            }
-            c.drawPath(path, white)
-            c.restore()
-        } else {
-            val letter = when (state) {
-                VehicleState.IDLE -> "Z"
-                VehicleState.PARKED -> "P"
-                else -> "?"
-            }
-            val lp = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.WHITE
-                textSize = radius * 1.05f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                textAlign = Paint.Align.CENTER
-            }
-            c.drawText(letter, cx, cy - (lp.descent() + lp.ascent()) / 2, lp)
-        }
+        // Cień, biały obrys, wypełnienie gradientem
+        c.save(); c.translate(0f, 1.5f * d)
+        c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE; strokeWidth = outline * 2; strokeJoin = Paint.Join.ROUND; color = 0x40000000
+        })
+        c.restore()
+        c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE; strokeWidth = outline * 2; strokeJoin = Paint.Join.ROUND
+            color = if (selected) 0xFFD32F2F.toInt() else android.graphics.Color.WHITE
+        })
+        c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                0f, carTop, 0f, carTop + carSize,
+                ColorUtils.blendARGB(base, android.graphics.Color.WHITE, 0.25f),
+                ColorUtils.blendARGB(base, android.graphics.Color.BLACK, 0.15f),
+                Shader.TileMode.CLAMP,
+            )
+        })
+        // Szyba i reflektory
+        c.drawPath(glass, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt() })
+        val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
+        val ly = carTop + 14.5f * scale
+        c.drawCircle(cx - carSize / 2 + 6.5f * scale, ly, 1.5f * scale, lightPaint)
+        c.drawCircle(cx - carSize / 2 + 17.5f * scale, ly, 1.5f * scale, lightPaint)
 
-        val top = circleArea + gap
+        // Etykieta z nazwą pojazdu
+        val top = carArea + gap
         val rect = RectF(cx - textW / 2 - padH, top, cx + textW / 2 + padH, top + labelH)
-        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (selected) 0xFFC62828.toInt() else 0xE6263238.toInt() }
-        c.drawRoundRect(rect, labelH / 2, labelH / 2, bg)
+        val r = 6f * d
+        c.drawRoundRect(RectF(rect).apply { offset(0f, 1f * d) }, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33000000 })
+        c.drawRoundRect(rect, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (selected) 0xFFD32F2F.toInt() else android.graphics.Color.WHITE
+        })
+        if (!selected) {
+            c.drawRoundRect(rect, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE; strokeWidth = 1f * d; color = 0x22000000
+            })
+        }
         val baseline = rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
         c.drawText(label, rect.left + padH, baseline, textPaint)
 
-        return Icon(BitmapDrawable(context.resources, bmp), cy / height)
+        // Kotwica: środek samochodu – tam też rysowane jest pulsowanie
+        return Icon(BitmapDrawable(context.resources, bmp), (carTop + carSize / 2) / height)
     }
 }

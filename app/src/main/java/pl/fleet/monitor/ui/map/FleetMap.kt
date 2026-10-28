@@ -128,7 +128,7 @@ fun FleetMap(
                 }
                 val icon = icons.get(v, v.deviceId == selectedId)
                 marker.id = v.deviceId
-                marker.title = v.label
+                marker.title = v.displayName
                 marker.position = GeoPoint(v.latitude!!, v.longitude!!)
                 marker.icon = icon.drawable
                 marker.setAnchor(Marker.ANCHOR_CENTER, icon.anchorY)

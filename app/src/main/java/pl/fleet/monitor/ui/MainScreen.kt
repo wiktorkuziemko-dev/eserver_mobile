@@ -25,6 +25,7 @@ import pl.fleet.monitor.ui.map.MapScreen
 fun MainScreen(vm: FleetViewModel, onOpenVehicle: (String) -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
+    pl.fleet.monitor.ui.components.StatusBarIcons(white = false)
 
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) { vm.autoRefreshLoop() }

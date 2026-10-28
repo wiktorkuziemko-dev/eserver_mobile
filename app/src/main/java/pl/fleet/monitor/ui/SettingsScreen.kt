@@ -65,15 +65,15 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
             }
         }
 
-        SectionTitle("Mapa")
+        SectionTitle("Pojazdy")
         Card(onClick = onOpenVisibility, modifier = Modifier.fillMaxWidth()) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Visibility, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Pojazdy widoczne na mapie", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("Widoczność i ikony pojazdów", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     val visible = fleet.vehicles.count { it.deviceId !in fleet.hidden }
-                    Text("$visible z ${fleet.vehicles.size}", style = MaterialTheme.typography.bodySmall,
+                    Text("Widoczne w aplikacji: $visible z ${fleet.vehicles.size}", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

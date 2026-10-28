@@ -97,6 +97,7 @@ private fun AppNavigation() {
                 val vm: VehicleDetailsViewModel = viewModel(key = "details-$id") { VehicleDetailsViewModel(app, vehicle.serial) }
                 VehicleDetailsScreen(
                     vehicle = vehicle,
+                    icon = fleet.icons[id] ?: pl.fleet.monitor.ui.VehicleIcon.DEFAULT,
                     vm = vm,
                     onBack = { nav.popBackStack() },
                     onHistory = { nav.navigate(Routes.history(id, vehicle.serial, vehicle.label)) },

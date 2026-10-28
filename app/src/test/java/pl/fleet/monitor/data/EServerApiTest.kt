@@ -124,6 +124,7 @@ class EServerApiTest {
         assertEquals(VehicleState.PARKED, v(Ignition.OFF, 0).state)
         assertEquals(VehicleState.PARKED, v(Ignition.UNKNOWN, 0).state)
         assertEquals(VehicleState.DRIVING, v(Ignition.UNKNOWN, 5).state)
+        assertEquals(VehicleState.DRIVING, v(Ignition.OFF, 30).state)
     }
 
     @Test fun `history details encoded as object and empty data array`() = runTest {

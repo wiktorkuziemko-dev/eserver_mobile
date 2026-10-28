@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import pl.fleet.monitor.ui.VehicleIcon
 import pl.fleet.monitor.ui.color
 import pl.fleet.monitor.ui.theme.stateGradient
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,7 +99,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
                         }
                     }
                     items(ui.filtered, key = { it.deviceId }) { v ->
-                        VehicleRow(v, onClick = { onOpenVehicle(v.deviceId) })
+                        VehicleRow(v, ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT, onClick = { onOpenVehicle(v.deviceId) })
                     }
                 }
             }
@@ -107,7 +108,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
 }
 
 @Composable
-private fun VehicleRow(v: Vehicle, onClick: () -> Unit) {
+private fun VehicleRow(v: Vehicle, icon: VehicleIcon, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -118,6 +119,8 @@ private fun VehicleRow(v: Vehicle, onClick: () -> Unit) {
         // Pasek koloru stanu z gradientem
         Box(Modifier.width(5.dp).fillMaxHeight().background(stateGradient(v.state.color)))
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon.vector, icon.label, Modifier.size(28.dp), tint = v.state.color)
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 // Nazwa pojazdu jak na mapie, pod nią numer nadajnika
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,7 +142,6 @@ private fun VehicleRow(v: Vehicle, onClick: () -> Unit) {
                 Spacer(Modifier.size(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
-                    if (v.state == VehicleState.DRIVING) Meta(Icons.Outlined.Explore, Fmt.heading(v.heading).substringBefore(" "))
                     Meta(
                         Icons.Outlined.Schedule, Fmt.ago(v.lastPositionTime),
                         warn = Fmt.isStale(v.lastPositionTime),

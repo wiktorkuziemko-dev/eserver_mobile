@@ -32,12 +32,13 @@ data class FleetUiState(
     val showDriving: Boolean = true,
     val showParked: Boolean = true,
     val hidden: Set<String> = emptySet(),
+    val icons: Map<String, VehicleIcon> = emptyMap(),
 ) {
     val selected: Vehicle? get() = vehicles.firstOrNull { it.deviceId == selectedId }
 
     val filtered: List<Vehicle>
         get() = vehicles.filter { v ->
-            (stateFilter == null || v.state == stateFilter) &&
+            v.deviceId !in hidden && (stateFilter == null || v.state == stateFilter) &&
                 (query.isBlank() || listOf(v.plateNo, v.name, v.serial).any { it.contains(query.trim(), ignoreCase = true) })
         }
 
@@ -138,7 +139,14 @@ class FleetViewModel(app: Application) : AndroidViewModel(app) {
         showDriving = session.showDriving,
         showParked = session.showParked,
         hidden = session.hiddenVehicles,
+        icons = session.vehicleIcons.mapValues { VehicleIcon.fromKey(it.value) },
     )
+
+    fun setIcon(deviceId: String, icon: VehicleIcon) = _ui.update {
+        val icons = if (icon == VehicleIcon.DEFAULT) it.icons - deviceId else it.icons + (deviceId to icon)
+        session.vehicleIcons = icons.mapValues { e -> e.value.name }
+        it.copy(icons = icons)
+    }
 
     fun logout() {
         session.logout()

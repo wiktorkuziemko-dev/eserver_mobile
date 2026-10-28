@@ -16,6 +16,8 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.PathParser
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.data.VehicleState
+import pl.fleet.monitor.ui.VehicleIcon
+import pl.fleet.monitor.ui.androidPaths
 import pl.fleet.monitor.ui.color
 
 /**
@@ -39,13 +41,15 @@ class MarkerIcons(private val context: Context) {
     )
     private val windshieldPath: Path = PathParser.createPathFromPathData("M5,11l1.5,-4.5h11L19,11z")
 
-    fun get(v: Vehicle, selected: Boolean): Icon {
+    private val glyphCache = HashMap<VehicleIcon, List<Path>>()
+
+    fun get(v: Vehicle, selected: Boolean, icon: VehicleIcon = VehicleIcon.DEFAULT): Icon {
         val label = v.displayName.ifBlank { v.label }
-        val key = "$label|${v.state}|$selected"
-        return cache.getOrPut(key) { draw(label, v.state, selected) }
+        val key = "$label|${v.state}|$selected|$icon"
+        return cache.getOrPut(key) { draw(label, v.state, selected, icon) }
     }
 
-    private fun draw(label: String, state: VehicleState, selected: Boolean): Icon {
+    private fun draw(label: String, state: VehicleState, selected: Boolean, iconType: VehicleIcon): Icon {
         val d = density
         val carSize = (if (selected) 38f else 32f) * d
         val outline = 2.5f * d
@@ -70,33 +74,41 @@ class MarkerIcons(private val context: Context) {
         // Skalowanie ścieżek 24×24 do rozmiaru znacznika
         val scale = carSize / 24f
         val m = Matrix().apply { setScale(scale, scale); postTranslate(cx - carSize / 2, carTop) }
-        val car = Path(carPath).apply { transform(m) }
-        val glass = Path(windshieldPath).apply { transform(m) }
+        val isCar = iconType == VehicleIcon.CAR
+        val glyph: List<Path> = (if (isCar) listOf(carPath) else glyphCache.getOrPut(iconType) { iconType.vector.androidPaths() })
+            .map { src -> Path(src).apply { fillType = src.fillType; transform(m) } }
 
-        // Cień, biały obrys, wypełnienie gradientem
-        c.save(); c.translate(0f, 1.5f * d)
-        c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE; strokeWidth = outline * 2; strokeJoin = Paint.Join.ROUND; color = 0x40000000
-        })
-        c.restore()
-        c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        }
+        val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE; strokeWidth = outline * 2; strokeJoin = Paint.Join.ROUND
             color = if (selected) SELECTED else android.graphics.Color.WHITE
-        })
-        c.drawPath(car, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        }
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = LinearGradient(
                 0f, carTop, 0f, carTop + carSize,
                 ColorUtils.blendARGB(base, android.graphics.Color.WHITE, 0.25f),
                 ColorUtils.blendARGB(base, android.graphics.Color.BLACK, 0.15f),
                 Shader.TileMode.CLAMP,
             )
-        })
-        // Szyba i reflektory
-        c.drawPath(glass, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt() })
-        val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
-        val ly = carTop + 14.5f * scale
-        c.drawCircle(cx - carSize / 2 + 6.5f * scale, ly, 1.5f * scale, lightPaint)
-        c.drawCircle(cx - carSize / 2 + 17.5f * scale, ly, 1.5f * scale, lightPaint)
+        }
+        // Cień, biały obrys, wypełnienie gradientem
+        c.save(); c.translate(0f, 1.5f * d)
+        glyph.forEach { c.drawPath(it, shadowPaint) }
+        c.restore()
+        glyph.forEach { c.drawPath(it, outlinePaint) }
+        glyph.forEach { c.drawPath(it, fillPaint) }
+
+        if (isCar) {
+            // Szyba i reflektory domyślnej ikony auta
+            val glass = Path(windshieldPath).apply { transform(m) }
+            c.drawPath(glass, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt() })
+            val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
+            val ly = carTop + 14.5f * scale
+            c.drawCircle(cx - carSize / 2 + 6.5f * scale, ly, 1.5f * scale, lightPaint)
+            c.drawCircle(cx - carSize / 2 + 17.5f * scale, ly, 1.5f * scale, lightPaint)
+        }
 
         // Etykieta z nazwą pojazdu
         val top = carArea + gap

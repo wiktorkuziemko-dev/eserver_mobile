@@ -92,7 +92,8 @@ data class Vehicle(
     val hasPosition: Boolean get() = latitude != null && longitude != null
 
     val state: VehicleState
-        get() = if (speed > 0 && ignition != Ignition.OFF) VehicleState.DRIVING else VehicleState.PARKED
+        // Tylko prędkość: część nadajników wybudza się z akcelerometru i zawsze raportuje zapłon wyłączony.
+        get() = if (speed > 0) VehicleState.DRIVING else VehicleState.PARKED
 
     /** Etykieta do wyświetlania – numer rejestracyjny, a gdy go brak – nazwa. */
     val label: String get() = plateNo.ifBlank { displayName.ifBlank { serial } }

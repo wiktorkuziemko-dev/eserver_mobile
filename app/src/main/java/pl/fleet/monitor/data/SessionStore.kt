@@ -52,6 +52,13 @@ class SessionStore(private val context: Context) {
         get() = prefs.getStringSet(KEY_HIDDEN, emptySet())!!.toSet()
         set(value) = prefs.edit().putStringSet(KEY_HIDDEN, value.toSet()).apply()
 
+    /** Ikony wybrane dla pojazdów: deviceId → nazwa ikony. */
+    var vehicleIcons: Map<String, String>
+        get() = prefs.getStringSet(KEY_ICONS, emptySet())!!.mapNotNull { e ->
+            e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] }
+        }.toMap()
+        set(value) = prefs.edit().putStringSet(KEY_ICONS, value.map { "${it.key}=${it.value}" }.toSet()).apply()
+
     fun login(c: Credentials, password: String, remember: Boolean) {
         prefs.edit().putString(KEY_LAST_LOGIN, c.login).putBoolean(KEY_REMEMBER, remember).apply()
         if (remember && secure != null) {
@@ -110,5 +117,6 @@ class SessionStore(private val context: Context) {
         const val KEY_SHOW_DRIVING = "show_driving"
         const val KEY_SHOW_PARKED = "show_parked"
         const val KEY_HIDDEN = "hidden_vehicles"
+        const val KEY_ICONS = "vehicle_icons"
     }
 }

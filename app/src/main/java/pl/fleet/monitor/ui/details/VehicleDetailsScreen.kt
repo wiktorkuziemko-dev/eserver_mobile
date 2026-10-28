@@ -86,6 +86,7 @@ import pl.fleet.monitor.ui.map.FleetMapState
 @Composable
 fun VehicleDetailsScreen(
     vehicle: Vehicle,
+    icon: pl.fleet.monitor.ui.VehicleIcon,
     vm: VehicleDetailsViewModel,
     onBack: () -> Unit,
     onHistory: () -> Unit,
@@ -115,6 +116,7 @@ fun VehicleDetailsScreen(
                     vehicles = listOf(vehicle),
                     state = mapState,
                     selectedId = vehicle.deviceId,
+                    icons = mapOf(vehicle.deviceId to icon),
                     modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)),
                 )
                 androidx.compose.runtime.LaunchedEffect(vehicle.latitude, vehicle.longitude) {
@@ -140,10 +142,6 @@ fun VehicleDetailsScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoTile(Icons.Outlined.Speed, "Prędkość", Fmt.speed(vehicle.speed), Modifier.weight(1f))
                 InfoTile(Icons.Outlined.Key, "Zapłon", Fmt.ignition(vehicle.ignition), Modifier.weight(1f))
-            }
-            Spacer(Modifier.size(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoTile(Icons.Outlined.Explore, "Kierunek", Fmt.heading(vehicle.heading), Modifier.weight(1f))
                 InfoTile(Icons.Outlined.Route, "Przebieg", Fmt.mileage(vehicle.mileage), Modifier.weight(1f))
             }
             Spacer(Modifier.size(8.dp))

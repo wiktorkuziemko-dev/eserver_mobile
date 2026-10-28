@@ -22,6 +22,7 @@ import org.osmdroid.views.overlay.Marker
 import androidx.compose.ui.graphics.toArgb
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.data.VehicleState
+import pl.fleet.monitor.ui.VehicleIcon
 import pl.fleet.monitor.ui.color
 
 /** Uchwyt pozwalający sterować mapą spoza kompozycji (dopasowanie widoku, wycentrowanie na pojeździe). */
@@ -71,10 +72,11 @@ fun FleetMap(
     modifier: Modifier = Modifier,
     state: FleetMapState = remember { FleetMapState() },
     selectedId: String? = null,
+    icons: Map<String, VehicleIcon> = emptyMap(),
     onSelect: (Vehicle?) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val icons = remember { MarkerIcons(context) }
+    val markerIcons = remember { MarkerIcons(context) }
     val markers = remember { HashMap<String, Marker>() }
     val currentOnSelect = rememberUpdatedState(onSelect)
     val currentVehicles = rememberUpdatedState(vehicles)
@@ -126,7 +128,7 @@ fun FleetMap(
                         map.overlays.add(m)
                     }
                 }
-                val icon = icons.get(v, v.deviceId == selectedId)
+                val icon = markerIcons.get(v, v.deviceId == selectedId, icons[v.deviceId] ?: VehicleIcon.DEFAULT)
                 marker.id = v.deviceId
                 marker.title = v.displayName
                 marker.position = GeoPoint(v.latitude!!, v.longitude!!)

@@ -22,7 +22,7 @@ jobs:
         if: failure()
         run: |
           # Błędy jako adnotacje – widoczne w podsumowaniu uruchomienia bez pobierania logów.
-          grep -E "^e: |What went wrong|^> |FAILED|error:" build.log | head -60 > errors.txt || true
+          grep -vE "^> Task" build.log | grep -E "^e: |What went wrong|^> |^   > |FAILED|error:|Exception" | head -80 > errors.txt || true
           split -l 6 errors.txt part_
           for f in part_*; do
             msg=$(sed 's/%/%25/g' "$f" | sed ':a;N;$!ba;s/\n/%0A/g')

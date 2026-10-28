@@ -67,13 +67,13 @@ fun LoginScreen(vm: LoginViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
-                Modifier.size(88.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                Modifier.size(88.dp).background(MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.LocalShipping, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Icon(Icons.Outlined.LocalShipping, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimary)
             }
             Spacer(Modifier.height(16.dp))
-            Text("Monitoring floty", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("E-SERVER PRO", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             Text(
                 "Zaloguj się danymi konta platformy E-SERVER",
                 style = MaterialTheme.typography.bodyMedium,
@@ -116,7 +116,7 @@ fun LoginScreen(vm: LoginViewModel) {
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = ui.remember, onCheckedChange = vm::onRemember, enabled = !ui.loading)
-                Text("Zapamiętaj mnie", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text("Zapamiętaj dane logowania", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 TextButton(onClick = vm::toggleServer) {
                     Icon(Icons.Outlined.Dns, null, Modifier.size(18.dp))
                     Spacer(Modifier.size(4.dp))

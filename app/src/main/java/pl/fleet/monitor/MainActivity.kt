@@ -1,8 +1,10 @@
 package pl.fleet.monitor
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +34,11 @@ import pl.fleet.monitor.ui.theme.FleetTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Jasne paski systemowe (ciemne ikony) niezależnie od trybu ciemnego telefonu.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+        )
         setContent { FleetTheme { AppNavigation() } }
     }
 }
@@ -41,9 +47,10 @@ private object Routes {
     const val LOGIN = "login"
     const val MAIN = "main"
     const val VEHICLE = "vehicle/{id}"
-    const val HISTORY = "history/{id}"
+    const val HISTORY = "history/{id}?serial={serial}&label={label}"
     fun vehicle(id: String) = "vehicle/$id"
-    fun history(id: String) = "history/$id"
+    fun history(id: String, serial: String, label: String) =
+        "history/$id?serial=${Uri.encode(serial)}&label=${Uri.encode(label)}"
 }
 
 @Composable
@@ -82,7 +89,7 @@ private fun AppNavigation() {
                     vehicle = vehicle,
                     vm = vm,
                     onBack = { nav.popBackStack() },
-                    onHistory = { nav.navigate(Routes.history(id)) },
+                    onHistory = { nav.navigate(Routes.history(id, vehicle.serial, vehicle.label)) },
                     onShowOnMap = {
                         fleetVm.showOnMap(id)
                         nav.popBackStack(Routes.MAIN, inclusive = false)
@@ -92,11 +99,19 @@ private fun AppNavigation() {
             }
         }
 
-        composable(Routes.HISTORY, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+        composable(
+            Routes.HISTORY,
+            arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("serial") { type = NavType.StringType; defaultValue = "" },
+                navArgument("label") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) { entry ->
             val id = entry.arguments?.getString("id").orEmpty()
-            val vehicle = fleet.vehicles.firstOrNull { it.deviceId == id }
-            val vm: HistoryViewModel = viewModel(key = "history-$id") { HistoryViewModel(app, vehicle?.serial.orEmpty()) }
-            HistoryScreen(vehicleLabel = vehicle?.label.orEmpty(), vm = vm, onBack = { nav.popBackStack() })
+            val serial = entry.arguments?.getString("serial").orEmpty()
+            val label = entry.arguments?.getString("label").orEmpty()
+            val vm: HistoryViewModel = viewModel(key = "history-$id") { HistoryViewModel(app, serial) }
+            HistoryScreen(vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() })
         }
     }
 }

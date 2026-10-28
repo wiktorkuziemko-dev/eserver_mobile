@@ -104,7 +104,7 @@ fun SettingsScreen(vm: FleetViewModel, modifier: Modifier = Modifier) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
             title = { Text("Wylogować?") },
-            text = { Text("Zapisane dane logowania zostaną usunięte z urządzenia.") },
+            text = { Text(if (vm.session.rememberEnabled) "Login i hasło pozostaną zapamiętane na ekranie logowania. Aby je usunąć, odznacz „Zapamiętaj dane logowania” przy następnym logowaniu." else "Sesja zostanie zakończona.") },
             confirmButton = { TextButton(onClick = { confirmLogout = false; vm.logout() }) { Text("Wyloguj") } },
             dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Anuluj") } },
         )

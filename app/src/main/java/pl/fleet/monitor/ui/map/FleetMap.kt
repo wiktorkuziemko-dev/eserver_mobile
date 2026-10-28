@@ -1,7 +1,6 @@
 package pl.fleet.monitor.ui.map
 
 import android.content.Context
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -20,8 +19,10 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.TilesOverlay
+import androidx.compose.ui.graphics.toArgb
 import pl.fleet.monitor.data.Vehicle
+import pl.fleet.monitor.data.VehicleState
+import pl.fleet.monitor.ui.color
 
 /** Uchwyt pozwalający sterować mapą spoza kompozycji (dopasowanie widoku, wycentrowanie na pojeździe). */
 class FleetMapState {
@@ -73,13 +74,13 @@ fun FleetMap(
     onSelect: (Vehicle?) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val dark = isSystemInDarkTheme()
     val icons = remember { MarkerIcons(context) }
     val markers = remember { HashMap<String, Marker>() }
     val currentOnSelect = rememberUpdatedState(onSelect)
     val currentVehicles = rememberUpdatedState(vehicles)
 
-    val mapView = remember { createMapView(context, state) { currentOnSelect.value(null) } }
+    val pulse = remember { PulseOverlay(context.resources.displayMetrics.density, VehicleState.DRIVING.color.toArgb()) }
+    val mapView = remember { createMapView(context, state, pulse) { currentOnSelect.value(null) } }
     state.mapView = mapView
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -109,7 +110,8 @@ fun FleetMap(
         factory = { mapView },
         modifier = modifier,
         update = { map ->
-            map.overlayManager.tilesOverlay.setColorFilter(if (dark) TilesOverlay.INVERT_COLORS else null)
+            pulse.points = vehicles.filter { it.hasPosition && it.state == VehicleState.DRIVING }
+                .map { GeoPoint(it.latitude!!, it.longitude!!) }
 
             val ids = vehicles.filter { it.hasPosition }.map { it.deviceId }.toSet()
             markers.keys.filter { it !in ids }.forEach { id -> map.overlays.remove(markers.remove(id)) }
@@ -138,7 +140,7 @@ fun FleetMap(
     )
 }
 
-private fun createMapView(context: Context, state: FleetMapState, onMapTap: () -> Unit): MapView =
+private fun createMapView(context: Context, state: FleetMapState, pulse: PulseOverlay, onMapTap: () -> Unit): MapView =
     MapView(context).apply {
         setTileSource(TileSourceFactory.MAPNIK)
         setMultiTouchControls(true)
@@ -152,6 +154,7 @@ private fun createMapView(context: Context, state: FleetMapState, onMapTap: () -
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean { onMapTap(); return false }
             override fun longPressHelper(p: GeoPoint?): Boolean = false
         }))
+        overlays.add(pulse) // pod znacznikami – te są dodawane później
         addOnFirstLayoutListener { _, _, _, _, _ ->
             state.laidOut = true
             state.pendingFit?.let { state.pendingFit = null; state.fitAll(it) }

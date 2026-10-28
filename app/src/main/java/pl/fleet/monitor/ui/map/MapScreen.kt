@@ -25,7 +25,13 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.filled.LocalParking
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,10 +60,10 @@ import pl.fleet.monitor.ui.shortLabel
 
 @Composable
 fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> Unit, modifier: Modifier = Modifier) {
-    val visible = ui.filtered
+    val visible = ui.mapVehicles
 
     LaunchedEffect(ui.vehicles.isNotEmpty()) {
-        if (ui.vehicles.isNotEmpty() && !vm.mapState.hasFitted) vm.mapState.fitAll(ui.vehicles)
+        if (ui.vehicles.isNotEmpty() && !vm.mapState.hasFitted) vm.mapState.fitAll(visible.ifEmpty { ui.vehicles })
     }
 
     Box(modifier.fillMaxSize()) {
@@ -69,40 +75,41 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             onSelect = vm::select,
         )
 
-        // Pasek podsumowania floty
+        // Pasek z dwoma przełącznikami: jadące / zaparkowane
         Column(Modifier.align(Alignment.TopCenter).padding(12.dp).fillMaxWidth()) {
-            Card(elevation = CardDefaults.cardElevation(4.dp)) {
-                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Pojazdy: ${ui.vehicles.size}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (ui.loading) {
-                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(
-                            ui.lastRefresh?.let { "Aktualizacja ${Fmt.timeSec(it)}" } ?: "Ładowanie…",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+            Card(
+                elevation = CardDefaults.cardElevation(4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TypeToggle(
+                        icon = Icons.Filled.LocalShipping,
+                        description = "Jadące",
+                        count = ui.drivingOnMap,
+                        color = VehicleState.DRIVING.color,
+                        checked = ui.showDriving,
+                        onClick = vm::toggleDriving,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TypeToggle(
+                        icon = Icons.Filled.LocalParking,
+                        description = "Zaparkowane",
+                        count = ui.parkedOnMap,
+                        color = VehicleState.PARKED.color,
+                        checked = ui.showParked,
+                        onClick = vm::toggleParked,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    if (ui.loading) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
                     }
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(VehicleState.DRIVING, VehicleState.IDLE, VehicleState.PARKED, VehicleState.UNKNOWN).forEach { s ->
-                            val n = ui.count(s)
-                            if (n > 0 || s != VehicleState.UNKNOWN) {
-                                FilterChip(
-                                    selected = ui.stateFilter == s,
-                                    onClick = { vm.setFilter(s) },
-                                    label = { Text("${s.shortLabel}: $n") },
-                                    leadingIcon = { StateDot(s) },
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        ui.lastRefresh?.let { Fmt.timeSec(it) } ?: "…",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
                 }
             }
             ui.error?.let { err ->
@@ -136,9 +143,30 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
     }
 }
 
+/** Przełącznik typu pojazdów: ikona + liczba; wyłączony = wyszarzony. */
 @Composable
-private fun StateDot(s: VehicleState) {
-    Box(Modifier.size(10.dp).background(s.color, CircleShape))
+private fun TypeToggle(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    count: Int,
+    color: androidx.compose.ui.graphics.Color,
+    checked: Boolean,
+    onClick: () -> Unit,
+) {
+    val bg = if (checked) color else MaterialTheme.colorScheme.surfaceVariant
+    val fg = if (checked) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = bg,
+        modifier = Modifier.semantics { stateDescription = if (checked) "pokazane" else "ukryte" },
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, description, Modifier.size(22.dp), tint = fg)
+            Spacer(Modifier.width(6.dp))
+            Text(count.toString(), color = fg, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        }
+    }
 }
 
 @Composable

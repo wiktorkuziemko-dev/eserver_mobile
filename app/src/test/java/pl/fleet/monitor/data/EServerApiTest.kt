@@ -122,4 +122,29 @@ class EServerApiTest {
         assertEquals(VehicleState.PARKED, v(Ignition.OFF, 0).state)
         assertEquals(VehicleState.UNKNOWN, v(Ignition.UNKNOWN, 0).state)
     }
+
+    @Test fun `history details encoded as object and empty data array`() = runTest {
+        server.enqueue(MockResponse().setBody("""
+            {"result":"OK","data":{"distance":"12,5","driving_time":"600","parking_time":0,"details":{
+              "0":{"motion":"1","begin":"2023-01-01 00:20:46","end":"2023-01-01 00:30:46","distance":"12.5"},
+              "2":{"motion":0,"begin":"2023-01-01 00:30:46","end":"2023-01-01 01:00:00"}}}}
+        """))
+        server.enqueue(MockResponse().setBody("""{"result":"OK","data":[]}"""))
+        val h = api.history(creds, "1", ZonedDateTime.now(), ZonedDateTime.now(), true)
+        assertEquals(12.5, h.distanceKm, 0.001)
+        assertEquals(2, h.entries.size)
+        assertTrue(h.entries[0].motion)
+        assertFalse(h.entries[1].motion)
+        val empty = api.history(creds, "1", ZonedDateTime.now(), ZonedDateTime.now(), true)
+        assertEquals(0, empty.entries.size)
+    }
+
+    @Test fun `transient server error is retried`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(502))
+        server.enqueue(MockResponse().setBody("<html>busy</html>"))
+        server.enqueue(MockResponse().setBody("""{"result":"OK","data":{"distance":1,"driving_time":2,"parking_time":3}}"""))
+        val h = api.history(creds, "1", ZonedDateTime.now(), ZonedDateTime.now(), false)
+        assertEquals(2L, h.drivingSeconds)
+        assertEquals(3, server.requestCount)
+    }
 }

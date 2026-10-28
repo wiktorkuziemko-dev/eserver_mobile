@@ -29,6 +29,9 @@ data class FleetUiState(
     val stateFilter: VehicleState? = null,
     val selectedId: String? = null,
     val tab: MainTab = MainTab.MAP,
+    val showDriving: Boolean = true,
+    val showParked: Boolean = true,
+    val hidden: Set<String> = emptySet(),
 ) {
     val selected: Vehicle? get() = vehicles.firstOrNull { it.deviceId == selectedId }
 
@@ -39,6 +42,16 @@ data class FleetUiState(
         }
 
     fun count(state: VehicleState) = vehicles.count { it.state == state }
+
+    /** Pojazdy włączone przełącznikiem „Pokazuj na mapie”. */
+    private val onMap: List<Vehicle> get() = vehicles.filter { it.deviceId !in hidden }
+
+    val drivingOnMap: Int get() = onMap.count { it.state == VehicleState.DRIVING }
+    val parkedOnMap: Int get() = onMap.count { it.state != VehicleState.DRIVING }
+
+    /** Pojazdy widoczne na mapie: przełącznik na liście + filtr jadące / zaparkowane. */
+    val mapVehicles: List<Vehicle>
+        get() = onMap.filter { if (it.state == VehicleState.DRIVING) showDriving else showParked }
 }
 
 /** Współdzielony stan floty – wykorzystywany przez mapę, listę i szczegóły pojazdu. */
@@ -47,7 +60,7 @@ class FleetViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = fleetApp.repository
     val session = fleetApp.session
 
-    private val _ui = MutableStateFlow(FleetUiState())
+    private val _ui = MutableStateFlow(initialState())
     val ui: StateFlow<FleetUiState> = _ui.asStateFlow()
 
     val mapState = FleetMapState()
@@ -92,13 +105,40 @@ class FleetViewModel(app: Application) : AndroidViewModel(app) {
     fun setTab(t: MainTab) = _ui.update { it.copy(tab = t) }
 
     fun showOnMap(deviceId: String) {
+        // Pojazd musi być widoczny – włączamy go, jeśli był ukryty lub odfiltrowany.
+        if (deviceId in _ui.value.hidden) setOnMap(deviceId, true)
+        _ui.value.vehicles.firstOrNull { it.deviceId == deviceId }?.let { v ->
+            if (v.state == VehicleState.DRIVING && !_ui.value.showDriving) toggleDriving()
+            if (v.state != VehicleState.DRIVING && !_ui.value.showParked) toggleParked()
+        }
         _ui.update { it.copy(tab = MainTab.MAP, selectedId = deviceId) }
         _ui.value.selected?.let { mapState.focusOn(it, 16.0) }
     }
 
+    fun toggleDriving() = _ui.update { it.copy(showDriving = !it.showDriving).also { s -> session.showDriving = s.showDriving } }
+    fun toggleParked() = _ui.update { it.copy(showParked = !it.showParked).also { s -> session.showParked = s.showParked } }
+
+    fun setOnMap(deviceId: String, visible: Boolean) = _ui.update {
+        val hidden = if (visible) it.hidden - deviceId else it.hidden + deviceId
+        session.hiddenVehicles = hidden
+        it.copy(hidden = hidden, selectedId = if (!visible && it.selectedId == deviceId) null else it.selectedId)
+    }
+
+    fun setAllOnMap(visible: Boolean) = _ui.update {
+        val hidden = if (visible) emptySet() else it.vehicles.map { v -> v.deviceId }.toSet()
+        session.hiddenVehicles = hidden
+        it.copy(hidden = hidden)
+    }
+
+    private fun initialState() = FleetUiState(
+        showDriving = session.showDriving,
+        showParked = session.showParked,
+        hidden = session.hiddenVehicles,
+    )
+
     fun logout() {
         session.logout()
         mapState.hasFitted = false
-        _ui.value = FleetUiState()
+        _ui.value = initialState()
     }
 }

@@ -1,6 +1,9 @@
 package pl.fleet.monitor.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -37,8 +40,10 @@ data class Credentials(val login: String, val passwordMd5: String) {
 sealed class ApiException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class Unauthorized : ApiException("Błędny login lub hasło albo brak aktywnego dostępu do API (HTTP 403).")
     class Http(val code: Int) : ApiException("Serwer zwrócił błąd HTTP $code.")
-    class Network(cause: Throwable) : ApiException("Brak połączenia z serwerem. Sprawdź dostęp do internetu.", cause)
-    class Parse(cause: Throwable) : ApiException("Nieoczekiwany format odpowiedzi serwera.", cause)
+    class Network(cause: Throwable) :
+        ApiException("Brak połączenia z serwerem lub przekroczony czas odpowiedzi (${cause.javaClass.simpleName}).", cause)
+    class Parse(cause: Throwable, snippet: String = "") :
+        ApiException("Nieoczekiwany format odpowiedzi serwera." + if (snippet.isNotBlank()) " Odpowiedź: ${snippet.take(160)}" else "", cause)
     class Server(msg: String) : ApiException(msg)
 }
 
@@ -55,7 +60,7 @@ class EServerApi(
 
     private val http: OkHttpClient = client ?: OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
         .apply {
             if (enforceModernTls) {
                 // Wymagany TLS 1.2 lub nowszy (serwer akceptuje wyłącznie szyfry AEAD: AES-GCM, AES-CCM, CHACHA20).
@@ -108,7 +113,13 @@ class EServerApi(
             "details" to if (details) "1" else "0",
             "date_format" to ApiDates.FORMAT,
         )))
-        val entries = (data["details"] as? JsonArray).orEmpty().mapNotNull { item ->
+        // PHP potrafi zakodować listę jako obiekt {"0": {...}, "2": {...}} – obsługujemy obie formy.
+        val detailItems = when (val d = data["details"]) {
+            is JsonArray -> d
+            is JsonObject -> d.values.toList()
+            else -> emptyList()
+        }
+        val entries = detailItems.mapNotNull { item ->
             val o = item as? JsonObject ?: return@mapNotNull null
             HistoryEntry(
                 motion = o["motion"].asBoolean(),
@@ -144,10 +155,32 @@ class EServerApi(
                 ?: result
             throw ApiException.Server("Serwer zwrócił błąd: $msg")
         }
-        return (obj["data"] as? JsonObject) ?: obj
+        return when (val data = obj["data"]) {
+            is JsonObject -> data
+            is JsonArray -> JsonObject(emptyMap()) // pusta tablica z PHP = brak danych
+            else -> obj
+        }
     }
 
-    private suspend fun post(c: Credentials, endpoint: String, params: Map<String, String> = emptyMap()): JsonElement =
+    /**
+     * Zapytania wykonujemy pojedynczo (serwer bywa wrażliwy na równoległe zapytania z jednego konta)
+     * i ponawiamy przy błędach przejściowych: brak sieci, timeout, HTTP 5xx/429, uszkodzona odpowiedź.
+     */
+    private suspend fun post(c: Credentials, endpoint: String, params: Map<String, String> = emptyMap()): JsonElement {
+        var attempt = 0
+        while (true) {
+            try {
+                return mutex.withLock { postOnce(c, endpoint, params) }
+            } catch (e: ApiException) {
+                val transient = e is ApiException.Network || e is ApiException.Parse ||
+                    (e is ApiException.Http && (e.code >= 500 || e.code == 429))
+                if (!transient || ++attempt >= MAX_ATTEMPTS) throw e
+                delay(RETRY_DELAY_MS * attempt)
+            }
+        }
+    }
+
+    private suspend fun postOnce(c: Credentials, endpoint: String, params: Map<String, String>): JsonElement =
         withContext(Dispatchers.IO) {
             val body = FormBody.Builder(Charsets.UTF_8).apply { params.forEach { (k, v) -> add(k, v) } }.build()
             val request = Request.Builder()
@@ -168,14 +201,18 @@ class EServerApi(
                 }
                 val text = try { r.body?.string().orEmpty() } catch (e: IOException) { throw ApiException.Network(e) }
                 try {
-                    json.parseToJsonElement(text).also { it.jsonObject }
+                    json.parseToJsonElement(text.trim().removePrefix("\uFEFF")).also { it.jsonObject }
                 } catch (e: Exception) {
-                    throw ApiException.Parse(e)
+                    throw ApiException.Parse(e, text)
                 }
             }
         }
 
+    private val mutex = Mutex()
+
     companion object {
         const val DEFAULT_BASE_URL = "https://e-server.com.pl/api/"
+        private const val MAX_ATTEMPTS = 3
+        private const val RETRY_DELAY_MS = 800L
     }
 }

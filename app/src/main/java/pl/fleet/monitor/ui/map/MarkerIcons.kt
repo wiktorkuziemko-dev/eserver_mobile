@@ -55,7 +55,7 @@ class MarkerIcons(private val context: Context) {
         val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = stateColor }
         val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE; strokeWidth = stroke
-            color = if (selected) 0xFF0D47A1.toInt() else android.graphics.Color.WHITE
+            color = if (selected) 0xFF212121.toInt() else android.graphics.Color.WHITE
         }
         val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33000000 }
         c.drawCircle(cx, cy + d, radius + stroke / 2, shadow)
@@ -93,7 +93,7 @@ class MarkerIcons(private val context: Context) {
 
         val top = circleArea + gap
         val rect = RectF(cx - textW / 2 - padH, top, cx + textW / 2 + padH, top + labelH)
-        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (selected) 0xFF0D47A1.toInt() else 0xE6263238.toInt() }
+        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (selected) 0xFFC62828.toInt() else 0xE6263238.toInt() }
         c.drawRoundRect(rect, labelH / 2, labelH / 2, bg)
         val baseline = rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
         c.drawText(label, rect.left + padH, baseline, textPaint)

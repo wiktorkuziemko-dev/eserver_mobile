@@ -28,7 +28,14 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
     private val fleetApp = app as FleetApp
     private val session = fleetApp.session
 
-    private val _ui = MutableStateFlow(LoginUiState(login = session.lastLogin, serverUrl = session.baseUrl))
+    private val _ui = MutableStateFlow(
+        LoginUiState(
+            login = session.savedLogin,
+            password = session.savedPassword,
+            remember = session.rememberEnabled,
+            serverUrl = session.baseUrl,
+        )
+    )
     val ui: StateFlow<LoginUiState> = _ui.asStateFlow()
 
     fun onLogin(v: String) = _ui.update { it.copy(login = v, error = null) }
@@ -51,8 +58,8 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                 session.baseUrl = url
                 val creds = Credentials.fromPlain(s.login, s.password)
                 fleetApp.repository.verify(creds)
-                session.login(creds, s.remember)
-                _ui.update { it.copy(loading = false, password = "") }
+                session.login(creds, s.password, s.remember)
+                _ui.update { it.copy(loading = false) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

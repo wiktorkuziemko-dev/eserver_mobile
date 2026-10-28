@@ -81,6 +81,10 @@ class HistoryViewModel(app: Application, private val serial: String) : AndroidVi
 
     fun load() {
         job?.cancel()
+        if (serial.isBlank()) {
+            _ui.update { it.copy(loading = false, error = "Brak numeru urządzenia GPS dla tego pojazdu.") }
+            return
+        }
         val s = _ui.value
         val zone = ZoneId.systemDefault()
         val start = s.from.atStartOfDay(zone)

@@ -29,7 +29,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -95,8 +97,27 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
                             )
                         }
                     }
+                    if (ui.vehicles.isNotEmpty()) {
+                        item {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Na mapie: ${ui.vehicles.size - ui.hidden.count { id -> ui.vehicles.any { it.deviceId == id } }} z ${ui.vehicles.size}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TextButton(onClick = { vm.setAllOnMap(true) }) { Text("Pokaż wszystkie") }
+                                TextButton(onClick = { vm.setAllOnMap(false) }) { Text("Ukryj wszystkie") }
+                            }
+                        }
+                    }
                     items(ui.filtered, key = { it.deviceId }) { v ->
-                        VehicleRow(v, onClick = { onOpenVehicle(v.deviceId) })
+                        VehicleRow(
+                            v,
+                            onMap = v.deviceId !in ui.hidden,
+                            onMapChange = { visible -> vm.setOnMap(v.deviceId, visible) },
+                            onClick = { onOpenVehicle(v.deviceId) },
+                        )
                     }
                 }
             }
@@ -105,7 +126,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
 }
 
 @Composable
-private fun VehicleRow(v: Vehicle, onClick: () -> Unit) {
+private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Unit, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -130,7 +151,10 @@ private fun VehicleRow(v: Vehicle, onClick: () -> Unit) {
                     )
                 }
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Switch(checked = onMap, onCheckedChange = onMapChange)
+                Text("Pokazuj na mapie", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

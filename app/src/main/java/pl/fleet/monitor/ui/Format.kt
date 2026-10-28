@@ -48,6 +48,13 @@ object Fmt {
         return "$day, ${l.format(timeSecFmt)}"
     }
 
+    /** Krótko: „16:32” dla dzisiejszej daty, „27.10 16:32” dla wcześniejszej. */
+    fun shortStamp(t: ZonedDateTime?): String {
+        if (t == null) return "—"
+        val l = local(t)
+        return if (l.toLocalDate() == LocalDate.now()) l.format(timeFmt) else l.format(shortDayFmt) + " " + l.format(timeFmt)
+    }
+
     fun ago(t: ZonedDateTime?, now: ZonedDateTime = ZonedDateTime.now()): String {
         if (t == null) return "brak danych"
         val s = Duration.between(t, now).seconds

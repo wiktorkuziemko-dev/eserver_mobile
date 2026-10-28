@@ -31,6 +31,11 @@ import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
@@ -82,60 +87,64 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             onSelect = vm::select,
         )
 
-        // Blok „Twoje pojazdy”: filtry z licznikami + ostatnia aktualizacja z odświeżaniem
-        Column(Modifier.align(Alignment.TopStart).padding(12.dp)) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                shadowElevation = 4.dp,
-                modifier = Modifier.width(IntrinsicSize.Max),
-            ) {
-                Column(Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 2.dp)) {
-                    Text(
-                        "Twoje pojazdy",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-                    )
-                    TypeToggle(
-                        icon = Icons.Filled.LocalShipping,
-                        label = "Pojazdy w ruchu: ${ui.drivingOnMap}",
-                        color = VehicleState.DRIVING.color,
-                        checked = ui.showDriving,
-                        onClick = vm::toggleDriving,
-                    )
-                    Spacer(Modifier.size(6.dp))
-                    TypeToggle(
-                        icon = Icons.Filled.LocalParking,
-                        label = "Pojazdy zaparkowane: ${ui.parkedOnMap}",
-                        color = VehicleState.PARKED.color,
-                        checked = ui.showParked,
-                        onClick = vm::toggleParked,
-                    )
-                    HorizontalDivider(Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                            Text(
-                                "Ostatnia aktualizacja",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                ui.lastRefresh?.let { Fmt.stamp(it) } ?: "…",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        if (ui.loading) {
-                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            }
-                        } else {
-                            IconButton(onClick = { vm.refresh() }) {
-                                Icon(Icons.Outlined.Refresh, "Odśwież dane", tint = MaterialTheme.colorScheme.primary)
+        // Kapsuła segmentowa „Twoje pojazdy” + pigułka odświeżania – jeden rząd 44 dp
+        Column(Modifier.align(Alignment.TopStart).padding(12.dp).fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.height(44.dp).semantics { contentDescription = "Twoje pojazdy – filtr mapy" },
+                ) {
+                    Row(Modifier.height(IntrinsicSize.Max)) {
+                        Segment(
+                            count = ui.drivingOnMap,
+                            label = "w ruchu",
+                            color = VehicleState.DRIVING.color,
+                            tint = androidx.compose.ui.graphics.Color(0xFFE6F4E9),
+                            textColor = androidx.compose.ui.graphics.Color(0xFF1B6B2C),
+                            checked = ui.showDriving,
+                            onClick = vm::toggleDriving,
+                            startPadding = 14.dp, endPadding = 12.dp,
+                        )
+                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Segment(
+                            count = ui.parkedOnMap,
+                            label = "zaparkowane",
+                            color = VehicleState.PARKED.color,
+                            tint = androidx.compose.ui.graphics.Color(0xFFFFF1DC),
+                            textColor = androidx.compose.ui.graphics.Color(0xFF8A4B00),
+                            checked = ui.showParked,
+                            onClick = vm::toggleParked,
+                            startPadding = 12.dp, endPadding = 14.dp,
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                val refreshDescription = "Odśwież dane. Ostatnia aktualizacja: " + (ui.lastRefresh?.let { Fmt.stamp(it) } ?: "brak")
+                Surface(
+                    onClick = { vm.refresh() },
+                    enabled = !ui.loading,
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.height(44.dp).semantics { contentDescription = refreshDescription },
+                ) {
+                    Row(Modifier.padding(start = 10.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+                            if (ui.loading) {
+                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Outlined.Refresh, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                             }
                         }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            ui.lastRefresh?.let { Fmt.shortStamp(it) } ?: "…",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
@@ -198,37 +207,41 @@ private fun HiddenInfo(ui: FleetUiState, onShowAll: () -> Unit) {
     }
 }
 
-/** Przełącznik typu pojazdów: ikona + liczba; wyłączony = wyszarzony. */
+/**
+ * Połowa kapsuły: „● 5 w ruchu”. Włączona – tło w kolorze stanu; wyłączona – białe tło,
+ * przekreślone oko i przekreślony opis (widać, że te pojazdy są ukryte).
+ */
 @Composable
-private fun TypeToggle(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun Segment(
+    count: Int,
     label: String,
     color: androidx.compose.ui.graphics.Color,
+    tint: androidx.compose.ui.graphics.Color,
+    textColor: androidx.compose.ui.graphics.Color,
     checked: Boolean,
     onClick: () -> Unit,
+    startPadding: androidx.compose.ui.unit.Dp,
+    endPadding: androidx.compose.ui.unit.Dp,
 ) {
-    val fg = if (checked) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = if (checked) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
-        border = if (checked) null else BorderStroke(1.dp, color.copy(alpha = 0.6f)),
-        modifier = Modifier.fillMaxWidth().semantics { stateDescription = if (checked) "pokazane na mapie" else "ukryte na mapie" },
+    val fg = if (checked) textColor else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        Modifier
+            .fillMaxHeight()
+            .background(if (checked) tint else MaterialTheme.colorScheme.surface)
+            .toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = { onClick() })
+            .padding(start = startPadding, end = endPadding),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier
-                .then(if (checked) Modifier.background(pl.fleet.monitor.ui.theme.stateGradient(color)) else Modifier)
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Wyłączony filtr: przekreślone oko i przekreślony opis – widać, że te auta są ukryte.
-            Icon(if (checked) icon else Icons.Outlined.VisibilityOff, null, Modifier.size(18.dp), tint = if (checked) fg else color)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                label, color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                textDecoration = if (checked) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
-            )
+        if (checked) {
+            Box(Modifier.size(10.dp).background(color, CircleShape))
+        } else {
+            Icon(Icons.Outlined.VisibilityOff, null, Modifier.size(14.dp), tint = color)
         }
+        Spacer(Modifier.width(7.dp))
+        val decoration = if (checked) null else androidx.compose.ui.text.style.TextDecoration.LineThrough
+        Text(count.toString(), color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, textDecoration = decoration)
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Normal, textDecoration = decoration)
     }
 }
 

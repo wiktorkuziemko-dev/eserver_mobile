@@ -87,6 +87,7 @@ import pl.fleet.monitor.ui.map.FleetMapState
 fun VehicleDetailsScreen(
     vehicle: Vehicle,
     icon: pl.fleet.monitor.ui.VehicleIcon,
+    customLabel: String?,
     vm: VehicleDetailsViewModel,
     onBack: () -> Unit,
     onHistory: () -> Unit,
@@ -117,6 +118,7 @@ fun VehicleDetailsScreen(
                     state = mapState,
                     selectedId = vehicle.deviceId,
                     icons = mapOf(vehicle.deviceId to icon),
+                    labels = customLabel?.let { mapOf(vehicle.deviceId to it) } ?: emptyMap(),
                     modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)),
                 )
                 androidx.compose.runtime.LaunchedEffect(vehicle.latitude, vehicle.longitude) {
@@ -185,8 +187,11 @@ fun VehicleDetailsScreen(
                 Text("Pokaż w Google Maps")
             }
             Spacer(Modifier.size(8.dp))
-            TextButton(onClick = vm::runDiagnostics, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Icon(Icons.Outlined.BugReport, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Diagnostyka API")
+            // Diagnostyka API – ukryta; włączana stałą SHOW_API_DIAGNOSTICS (przydatne przy problemach z serwerem).
+            if (SHOW_API_DIAGNOSTICS) {
+                TextButton(onClick = vm::runDiagnostics, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Icon(Icons.Outlined.BugReport, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Diagnostyka API")
+                }
             }
             Spacer(Modifier.size(24.dp))
         }
@@ -194,6 +199,9 @@ fun VehicleDetailsScreen(
 
     ui.diagnostics?.let { d -> DiagnosticsDialog(d, vehicle.label, onClose = vm::closeDiagnostics) }
 }
+
+/** Przycisk „Diagnostyka API” w szczegółach pojazdu – ustaw na true, aby go pokazać. */
+private const val SHOW_API_DIAGNOSTICS = false
 
 @Composable
 private fun DiagnosticsDialog(d: Loadable<String>, label: String, onClose: () -> Unit) {

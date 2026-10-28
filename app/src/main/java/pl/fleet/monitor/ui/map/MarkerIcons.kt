@@ -43,8 +43,8 @@ class MarkerIcons(private val context: Context) {
 
     private val glyphCache = HashMap<VehicleIcon, List<Path>>()
 
-    fun get(v: Vehicle, selected: Boolean, icon: VehicleIcon = VehicleIcon.DEFAULT): Icon {
-        val label = v.displayName.ifBlank { v.label }
+    fun get(v: Vehicle, selected: Boolean, icon: VehicleIcon = VehicleIcon.DEFAULT, customLabel: String? = null): Icon {
+        val label = customLabel ?: v.displayName.ifBlank { v.label }
         val key = "$label|${v.state}|$selected|$icon"
         return cache.getOrPut(key) { draw(label, v.state, selected, icon) }
     }

@@ -42,7 +42,6 @@ import pl.fleet.monitor.ui.components.SectionTitle
 fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: Modifier = Modifier) {
     val fleet by vm.ui.collectAsStateWithLifecycle()
     val creds by vm.session.credentials.collectAsStateWithLifecycle()
-    var interval by remember { mutableIntStateOf(vm.session.refreshIntervalSec) }
     var confirmLogout by remember { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -59,7 +58,7 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                 Column(Modifier.weight(1f)) {
                     Text(creds?.login.orEmpty(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         color = androidx.compose.ui.graphics.Color.White)
-                    Text(vm.session.baseUrl, style = MaterialTheme.typography.bodySmall,
+                    Text("Zalogowany użytkownik", style = MaterialTheme.typography.bodySmall,
                         color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
                 }
             }
@@ -71,40 +70,12 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                 Icon(Icons.Outlined.Visibility, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Widoczność i ikony pojazdów", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("Widoczność, ikony i opisy pojazdów", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     val visible = fleet.vehicles.count { it.deviceId !in fleet.hidden }
                     Text("Widoczne w aplikacji: $visible z ${fleet.vehicles.size}", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        SectionTitle("Automatyczne odświeżanie pozycji")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(15, 30, 60, 120).forEach { sec ->
-                FilterChip(
-                    selected = interval == sec,
-                    onClick = { interval = sec; vm.session.refreshIntervalSec = sec },
-                    label = { Text(if (sec < 60) "$sec s" else "${sec / 60} min") },
-                )
-            }
-        }
-
-        SectionTitle("Legenda")
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            pl.fleet.monitor.data.VehicleState.entries.forEach { s ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    pl.fleet.monitor.ui.components.StateBadge(s)
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        when (s) {
-                            pl.fleet.monitor.data.VehicleState.DRIVING -> "pojazd jedzie (prędkość > 0)"
-                            pl.fleet.monitor.data.VehicleState.PARKED -> "pojazd stoi"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
             }
         }
 

@@ -35,9 +35,6 @@ class SessionStore(private val context: Context) {
         get() = prefs.getString(KEY_BASE_URL, null) ?: EServerApi.DEFAULT_BASE_URL
         set(value) = prefs.edit().putString(KEY_BASE_URL, value.trim().ifBlank { EServerApi.DEFAULT_BASE_URL }).apply()
 
-    var refreshIntervalSec: Int
-        get() = prefs.getInt(KEY_REFRESH, 30)
-        set(value) = prefs.edit().putInt(KEY_REFRESH, value).apply()
 
     var showDriving: Boolean
         get() = prefs.getBoolean(KEY_SHOW_DRIVING, true)
@@ -58,6 +55,13 @@ class SessionStore(private val context: Context) {
             e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] }
         }.toMap()
         set(value) = prefs.edit().putStringSet(KEY_ICONS, value.map { "${it.key}=${it.value}" }.toSet()).apply()
+
+    /** Własne opisy pojazdów na mapie: deviceId → opis. */
+    var vehicleLabels: Map<String, String>
+        get() = prefs.getStringSet(KEY_LABELS, emptySet())!!.mapNotNull { e ->
+            e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] }
+        }.toMap()
+        set(value) = prefs.edit().putStringSet(KEY_LABELS, value.map { "${it.key}=${it.value}" }.toSet()).apply()
 
     fun login(c: Credentials, password: String, remember: Boolean) {
         prefs.edit().putString(KEY_LAST_LOGIN, c.login).putBoolean(KEY_REMEMBER, remember).apply()
@@ -113,10 +117,10 @@ class SessionStore(private val context: Context) {
         const val KEY_REMEMBER = "remember"
         const val KEY_LAST_LOGIN = "last_login"
         const val KEY_BASE_URL = "base_url"
-        const val KEY_REFRESH = "refresh_interval"
         const val KEY_SHOW_DRIVING = "show_driving"
         const val KEY_SHOW_PARKED = "show_parked"
         const val KEY_HIDDEN = "hidden_vehicles"
         const val KEY_ICONS = "vehicle_icons"
+        const val KEY_LABELS = "vehicle_labels"
     }
 }

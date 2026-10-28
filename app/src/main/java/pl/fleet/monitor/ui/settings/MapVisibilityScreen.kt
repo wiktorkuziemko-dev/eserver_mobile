@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -98,14 +101,13 @@ fun MapVisibilityScreen(vm: FleetViewModel, onBack: () -> Unit) {
                     Row(
                         Modifier.fillMaxWidth()
                             .clickable { vm.setOnMap(v.deviceId, !visible) }
-                            .padding(start = 8.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+                            .padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Ikona pojazdu – dotknięcie otwiera wybór ikony
-                        IconButton(onClick = { pickFor = v }) {
-                            Icon(icon.vector, "Zmień ikonę: ${icon.label}", tint = MaterialTheme.colorScheme.primary)
-                        }
-                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            icon.vector, icon.label, Modifier.padding(horizontal = 8.dp).size(26.dp),
+                            tint = if (visible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        )
                         Column(Modifier.weight(1f)) {
                             Text(
                                 v.displayName.ifBlank { v.label }, fontWeight = FontWeight.SemiBold,
@@ -115,9 +117,24 @@ fun MapVisibilityScreen(vm: FleetViewModel, onBack: () -> Unit) {
                                 Text("Nr nadajnika: ${v.serial}", style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                            ui.customLabels[v.deviceId]?.let {
+                                Text("Opis na mapie: $it", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Switch(checked = visible, onCheckedChange = { vm.setOnMap(v.deviceId, it) })
+                        Spacer(Modifier.width(4.dp))
+                        // Przełącznik z podpisem – jasne, że dotyczy widoczności
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Switch(checked = visible, onCheckedChange = { vm.setOnMap(v.deviceId, it) })
+                            Text(
+                                if (visible) "Widoczny" else "Ukryty",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(onClick = { pickFor = v }) {
+                            Icon(Icons.Outlined.Edit, "Edytuj ikonę i opis", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -126,33 +143,53 @@ fun MapVisibilityScreen(vm: FleetViewModel, onBack: () -> Unit) {
     }
 
     pickFor?.let { v ->
-        IconPickerDialog(
-            title = v.displayName.ifBlank { v.label },
-            current = ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
-            onPick = { vm.setIcon(v.deviceId, it); pickFor = null },
+        EditVehicleDialog(
+            vehicleName = v.displayName.ifBlank { v.label },
+            currentIcon = ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
+            currentLabel = ui.customLabels[v.deviceId].orEmpty(),
+            onSave = { icon, label -> vm.setAppearance(v.deviceId, icon, label); pickFor = null },
             onDismiss = { pickFor = null },
         )
     }
 }
 
+/** Edycja wyglądu pojazdu na mapie: własny opis i ikona. */
 @Composable
-private fun IconPickerDialog(title: String, current: VehicleIcon, onPick: (VehicleIcon) -> Unit, onDismiss: () -> Unit) {
+private fun EditVehicleDialog(
+    vehicleName: String,
+    currentIcon: VehicleIcon,
+    currentLabel: String,
+    onSave: (VehicleIcon, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var icon by remember { mutableStateOf(currentIcon) }
+    var label by remember { mutableStateOf(currentLabel) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text("Ikona na mapie")
-                Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Edytuj pojazd")
+                Text(vehicleName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it.take(40) },
+                    label = { Text("Opis na mapie") },
+                    placeholder = { Text(vehicleName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    supportingText = { Text("Puste pole = nazwa pojazdu") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text("Ikona", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 VehicleIcon.entries.chunked(3).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { icon ->
-                            val selected = icon == current
+                        row.forEach { option ->
+                            val selected = option == icon
                             Surface(
-                                onClick = { onPick(icon) },
+                                onClick = { icon = option },
                                 shape = RoundedCornerShape(14.dp),
                                 color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                                 border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
@@ -162,10 +199,10 @@ private fun IconPickerDialog(title: String, current: VehicleIcon, onPick: (Vehic
                                     Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
-                                    Icon(icon.vector, null, Modifier.size(30.dp), tint = VehicleState.PARKED.color)
+                                    Icon(option.vector, null, Modifier.size(30.dp), tint = VehicleState.PARKED.color)
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        icon.label + if (icon == VehicleIcon.DEFAULT) " (domyślna)" else "",
+                                        option.label + if (option == VehicleIcon.DEFAULT) " (domyślna)" else "",
                                         style = MaterialTheme.typography.labelSmall,
                                         textAlign = TextAlign.Center,
                                         maxLines = 2,
@@ -178,6 +215,7 @@ private fun IconPickerDialog(title: String, current: VehicleIcon, onPick: (Vehic
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = { onSave(icon, label) }) { Text("Zapisz") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
     )
 }

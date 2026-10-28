@@ -33,7 +33,11 @@ data class FleetUiState(
     val showParked: Boolean = true,
     val hidden: Set<String> = emptySet(),
     val icons: Map<String, VehicleIcon> = emptyMap(),
+    val customLabels: Map<String, String> = emptyMap(),
 ) {
+    /** Opis pojazdu na mapie: własny z ustawień albo nazwa pojazdu. */
+    fun mapLabel(v: Vehicle): String = customLabels[v.deviceId] ?: v.displayName.ifBlank { v.label }
+
     val selected: Vehicle? get() = vehicles.firstOrNull { it.deviceId == selectedId }
 
     val filtered: List<Vehicle>
@@ -56,6 +60,9 @@ data class FleetUiState(
 }
 
 /** Współdzielony stan floty – wykorzystywany przez mapę, listę i szczegóły pojazdu. */
+/** Pozycje pojazdów odświeżane są zawsze co 30 sekund. */
+private const val REFRESH_INTERVAL_MS = 30_000L
+
 class FleetViewModel(app: Application) : AndroidViewModel(app) {
     private val fleetApp = app as FleetApp
     private val repo = fleetApp.repository
@@ -79,7 +86,7 @@ class FleetViewModel(app: Application) : AndroidViewModel(app) {
             refreshJob?.join()
             val last = _ui.value.lastRefresh
             if (last == null || java.time.Duration.between(last, ZonedDateTime.now()).seconds >= 5) load()
-            delay(session.refreshIntervalSec * 1000L)
+            delay(REFRESH_INTERVAL_MS)
         }
     }
 
@@ -140,7 +147,19 @@ class FleetViewModel(app: Application) : AndroidViewModel(app) {
         showParked = session.showParked,
         hidden = session.hiddenVehicles,
         icons = session.vehicleIcons.mapValues { VehicleIcon.fromKey(it.value) },
+        customLabels = session.vehicleLabels,
     )
+
+    /** Ikona i własny opis pojazdu (pusty opis = nazwa pojazdu). */
+    fun setAppearance(deviceId: String, icon: VehicleIcon, label: String) {
+        setIcon(deviceId, icon)
+        _ui.update {
+            val clean = label.replace('\n', ' ').trim()
+            val labels = if (clean.isEmpty()) it.customLabels - deviceId else it.customLabels + (deviceId to clean)
+            session.vehicleLabels = labels
+            it.copy(customLabels = labels)
+        }
+    }
 
     fun setIcon(deviceId: String, icon: VehicleIcon) = _ui.update {
         val icons = if (icon == VehicleIcon.DEFAULT) it.icons - deviceId else it.icons + (deviceId to icon)

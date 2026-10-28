@@ -73,6 +73,7 @@ fun FleetMap(
     state: FleetMapState = remember { FleetMapState() },
     selectedId: String? = null,
     icons: Map<String, VehicleIcon> = emptyMap(),
+    labels: Map<String, String> = emptyMap(),
     onSelect: (Vehicle?) -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -128,9 +129,9 @@ fun FleetMap(
                         map.overlays.add(m)
                     }
                 }
-                val icon = markerIcons.get(v, v.deviceId == selectedId, icons[v.deviceId] ?: VehicleIcon.DEFAULT)
+                val icon = markerIcons.get(v, v.deviceId == selectedId, icons[v.deviceId] ?: VehicleIcon.DEFAULT, labels[v.deviceId])
                 marker.id = v.deviceId
-                marker.title = v.displayName
+                marker.title = labels[v.deviceId] ?: v.displayName
                 marker.position = GeoPoint(v.latitude!!, v.longitude!!)
                 marker.icon = icon.drawable
                 marker.setAnchor(Marker.ANCHOR_CENTER, icon.anchorY)

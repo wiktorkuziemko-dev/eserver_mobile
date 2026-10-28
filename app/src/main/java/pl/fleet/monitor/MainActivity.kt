@@ -98,6 +98,7 @@ private fun AppNavigation() {
                 VehicleDetailsScreen(
                     vehicle = vehicle,
                     icon = fleet.icons[id] ?: pl.fleet.monitor.ui.VehicleIcon.DEFAULT,
+                    customLabel = fleet.customLabels[id],
                     vm = vm,
                     onBack = { nav.popBackStack() },
                     onHistory = { nav.navigate(Routes.history(id, vehicle.serial, vehicle.label)) },

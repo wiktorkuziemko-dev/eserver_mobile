@@ -5,7 +5,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -33,19 +41,25 @@ fun MainScreen(vm: FleetViewModel, onOpenVehicle: (String) -> Unit, onOpenVisibi
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = ui.tab == MainTab.MAP, onClick = { vm.setTab(MainTab.MAP) },
-                    icon = { Icon(Icons.Outlined.Map, null) }, label = { Text("Mapa") },
-                )
-                NavigationBarItem(
-                    selected = ui.tab == MainTab.LIST, onClick = { vm.setTab(MainTab.LIST) },
-                    icon = { Icon(Icons.AutoMirrored.Outlined.List, null) }, label = { Text("Pojazdy") },
-                )
-                NavigationBarItem(
-                    selected = ui.tab == MainTab.SETTINGS, onClick = { vm.setTab(MainTab.SETTINGS) },
-                    icon = { Icon(Icons.Outlined.Settings, null) }, label = { Text("Ustawienia") },
-                )
+            // Dolne menu: górna linia i pionowe separatory oddzielają sekcje
+            Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+                    NavigationBarItem(
+                        selected = ui.tab == MainTab.MAP, onClick = { vm.setTab(MainTab.MAP) },
+                        icon = { Icon(Icons.Outlined.Map, null) }, label = { Text("Mapa") },
+                    )
+                    NavDivider()
+                    NavigationBarItem(
+                        selected = ui.tab == MainTab.LIST, onClick = { vm.setTab(MainTab.LIST) },
+                        icon = { Icon(Icons.AutoMirrored.Outlined.List, null) }, label = { Text("Pojazdy") },
+                    )
+                    NavDivider()
+                    NavigationBarItem(
+                        selected = ui.tab == MainTab.SETTINGS, onClick = { vm.setTab(MainTab.SETTINGS) },
+                        icon = { Icon(Icons.Outlined.Settings, null) }, label = { Text("Ustawienia") },
+                    )
+                }
             }
         },
     ) { padding ->
@@ -56,4 +70,12 @@ fun MainScreen(vm: FleetViewModel, onOpenVehicle: (String) -> Unit, onOpenVisibi
             MainTab.SETTINGS -> SettingsScreen(vm, onOpenVisibility, modifier)
         }
     }
+}
+
+@Composable
+private fun RowScope.NavDivider() {
+    VerticalDivider(
+        Modifier.height(36.dp).align(Alignment.CenterVertically),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
 }

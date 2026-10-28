@@ -146,6 +146,27 @@ class EServerApi(
         return ApiDates.parse(value)
     }
 
+    /**
+     * Surowa odpowiedź serwera – na potrzeby ekranu diagnostyki.
+     * Zwraca kod HTTP i treść (bez interpretacji), nigdy nie rzuca wyjątku.
+     */
+    suspend fun raw(c: Credentials, endpoint: String, params: Map<String, String>): String =
+        withContext(Dispatchers.IO) {
+            val body = FormBody.Builder(Charsets.UTF_8).apply { params.forEach { (k, v) -> add(k, v) } }.build()
+            val request = Request.Builder()
+                .url(baseUrl + endpoint)
+                .header("Authorization", c.authorizationHeader)
+                .post(body)
+                .build()
+            try {
+                mutex.withLock {
+                    http.newCall(request).execute().use { r -> "HTTP ${r.code}\n" + r.body?.string().orEmpty().take(3000) }
+                }
+            } catch (e: Exception) {
+                "BŁĄD: ${e.javaClass.simpleName}: ${e.message}"
+            }
+        }
+
     private fun dataOf(root: JsonElement): JsonObject {
         val obj = root as? JsonObject ?: throw ApiException.Parse(IllegalStateException("not an object"))
         val result = (obj["result"] as? JsonPrimitive)?.contentOrNull

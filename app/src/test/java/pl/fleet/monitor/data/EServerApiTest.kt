@@ -21,6 +21,7 @@ class EServerApiTest {
     private val creds = Credentials.fromPlain("jan", "tajne")
 
     @Before fun setUp() {
+        ApiDates.zone = ZoneOffset.UTC
         server = MockWebServer().apply { start() }
         api = EServerApi(server.url("/api/").toString(), enforceModernTls = false)
     }
@@ -76,7 +77,7 @@ class EServerApiTest {
         val body = server.takeRequest().body.readUtf8()
         assertTrue(body, body.contains("serial=36001039"))
         assertTrue(body, body.contains("date=2023-05-29%2011%3A44%3A00") || body.contains("date=2023-05-29+11%3A44%3A00"))
-        assertTrue(body, body.contains("date_format=utc"))
+        assertTrue(body, body.contains("date_format=local"))
     }
 
     @Test fun `history with details`() = runTest {

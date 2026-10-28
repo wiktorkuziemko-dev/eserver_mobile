@@ -8,22 +8,28 @@ import kotlinx.serialization.json.longOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
  * Daty wysyłane do API i odbierane z API.
- * Używamy formatu `utc` – jest jednoznaczny niezależnie od strefy czasowej ustawionej na koncie;
- * konwersję na czas lokalny telefonu robi aplikacja.
+ * Używamy formatu `local` (czas w strefie użytkownika) – tak jak we wszystkich działających
+ * przykładach z dokumentacji. Zakładamy, że strefa konta jest taka sama jak strefa telefonu.
  */
 object ApiDates {
-    const val FORMAT = "utc"
+    const val FORMAT = "local"
+
+    /** Strefa, w której serwer podaje i przyjmuje daty w formacie `local`. */
+    @Volatile
+    var zone: ZoneId = ZoneId.systemDefault()
 
     private val apiFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    private val shortFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
     fun format(time: ZonedDateTime): String =
-        time.withZoneSameInstant(ZoneOffset.UTC).format(apiFormatter)
+        time.withZoneSameInstant(zone).format(apiFormatter)
 
     /** Przyjmuje timestamp (sekundy lub milisekundy), "yyyy-MM-dd HH:mm:ss", ISO-8601 lub samą datę. */
     fun parse(raw: String?): ZonedDateTime? {
@@ -33,10 +39,11 @@ object ApiDates {
             val instant = if (n > 100_000_000_000L) Instant.ofEpochMilli(n) else Instant.ofEpochSecond(n)
             return instant.atZone(ZoneOffset.UTC)
         }
-        return runCatching { LocalDateTime.parse(s, apiFormatter).atZone(ZoneOffset.UTC) }.getOrNull()
+        return runCatching { LocalDateTime.parse(s, apiFormatter).atZone(zone) }.getOrNull()
+            ?: runCatching { LocalDateTime.parse(s, shortFormatter).atZone(zone) }.getOrNull()
             ?: runCatching { ZonedDateTime.parse(s) }.getOrNull()
-            ?: runCatching { LocalDateTime.parse(s).atZone(ZoneOffset.UTC) }.getOrNull()
-            ?: runCatching { LocalDate.parse(s).atStartOfDay(ZoneOffset.UTC) }.getOrNull()
+            ?: runCatching { LocalDateTime.parse(s).atZone(zone) }.getOrNull()
+            ?: runCatching { LocalDate.parse(s).atStartOfDay(zone) }.getOrNull()
     }
 
     fun parse(element: JsonElement?): ZonedDateTime? =

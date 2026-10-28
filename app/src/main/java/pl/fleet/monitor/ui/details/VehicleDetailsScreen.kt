@@ -37,7 +37,13 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -128,7 +134,7 @@ fun VehicleDetailsScreen(
             }
 
             SectionTitle("Bieżąca aktywność")
-            CurrentActivityCard(ui.status)
+            CurrentActivityCard(ui.status, vehicle)
 
             SectionTitle("Dane pojazdu")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -182,13 +188,58 @@ fun VehicleDetailsScreen(
                     Icon(Icons.Outlined.Share, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Udostępnij")
                 }
             }
+            Spacer(Modifier.size(8.dp))
+            TextButton(onClick = vm::runDiagnostics, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Icon(Icons.Outlined.BugReport, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Diagnostyka API")
+            }
             Spacer(Modifier.size(24.dp))
         }
     }
+
+    ui.diagnostics?.let { d -> DiagnosticsDialog(d, vehicle.label, onClose = vm::closeDiagnostics) }
 }
 
 @Composable
-private fun CurrentActivityCard(status: Loadable<pl.fleet.monitor.data.MotionStatus>) {
+private fun DiagnosticsDialog(d: Loadable<String>, label: String, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val text = when (d) {
+        Loadable.Loading -> null
+        is Loadable.Failed -> d.message
+        is Loadable.Ready -> d.value
+    }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Diagnostyka API") },
+        text = {
+            if (text == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp)); Text("Wysyłanie zapytań testowych…")
+                }
+            } else {
+                SelectionContainer {
+                    Text(
+                        text,
+                        Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = text != null, onClick = {
+                val intent = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Diagnostyka API – $label")
+                    .putExtra(Intent.EXTRA_TEXT, text)
+                context.startActivity(Intent.createChooser(intent, "Wyślij diagnostykę"))
+            }) { Text("Udostępnij") }
+        },
+        dismissButton = { TextButton(onClick = onClose) { Text("Zamknij") } },
+    )
+}
+
+@Composable
+private fun CurrentActivityCard(status: Loadable<pl.fleet.monitor.data.MotionStatus>, vehicle: Vehicle) {
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             when (status) {
@@ -196,7 +247,18 @@ private fun CurrentActivityCard(status: Loadable<pl.fleet.monitor.data.MotionSta
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(12.dp)); Text("Pobieranie stanu…")
                 }
-                is Loadable.Failed -> Text(status.message, color = MaterialTheme.colorScheme.error)
+                is Loadable.Failed -> {
+                    // Funkcja status nie zwróciła danych – pokazujemy stan wynikający z ostatniej pozycji.
+                    val driving = vehicle.state == pl.fleet.monitor.data.VehicleState.DRIVING
+                    val stateColor = vehicle.state.color
+                    Icon(if (driving) Icons.Outlined.Route else Icons.Outlined.LocalParking, null, Modifier.size(32.dp), tint = stateColor)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(vehicle.state.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = stateColor)
+                        Text("według ostatniej pozycji (${Fmt.ago(vehicle.lastPositionTime)})", style = MaterialTheme.typography.bodySmall)
+                        Text(status.message, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 is Loadable.Ready -> {
                     val s = status.value
                     val stateColor = if (s.motion) pl.fleet.monitor.data.VehicleState.DRIVING.color else pl.fleet.monitor.data.VehicleState.PARKED.color

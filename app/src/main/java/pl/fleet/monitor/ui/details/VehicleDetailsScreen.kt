@@ -42,6 +42,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import pl.fleet.monitor.R
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.Card
@@ -84,7 +87,6 @@ fun VehicleDetailsScreen(
     vm: VehicleDetailsViewModel,
     onBack: () -> Unit,
     onHistory: () -> Unit,
-    onShowOnMap: () -> Unit,
     onRefresh: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -177,16 +179,14 @@ fun VehicleDetailsScreen(
                 Icon(Icons.Outlined.History, null); Spacer(Modifier.width(8.dp)); Text("Historia tras")
             }
             Spacer(Modifier.size(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onShowOnMap, modifier = Modifier.weight(1f), enabled = vehicle.hasPosition) {
-                    Icon(Icons.Outlined.Map, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Na mapie")
-                }
-                OutlinedButton(onClick = { navigate(context, vehicle) }, modifier = Modifier.weight(1f), enabled = vehicle.hasPosition) {
-                    Icon(Icons.Outlined.Directions, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Dojazd")
-                }
-                OutlinedButton(onClick = { share(context, vehicle) }, modifier = Modifier.weight(1f), enabled = vehicle.hasPosition) {
-                    Icon(Icons.Outlined.Share, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Udostępnij")
-                }
+            OutlinedButton(
+                onClick = { openInGoogleMaps(context, vehicle) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = vehicle.hasPosition,
+            ) {
+                Icon(painterResource(R.drawable.ic_google_maps), null, Modifier.size(20.dp), tint = Color.Unspecified)
+                Spacer(Modifier.width(8.dp))
+                Text("Pokaż w Google Maps")
             }
             Spacer(Modifier.size(8.dp))
             TextButton(onClick = vm::runDiagnostics, modifier = Modifier.align(Alignment.CenterHorizontally)) {
@@ -312,15 +312,11 @@ private fun copy(context: Context, label: String, value: String) {
     Toast.makeText(context, "Skopiowano: $label", Toast.LENGTH_SHORT).show()
 }
 
-private fun navigate(context: Context, v: Vehicle) {
-    val uri = Uri.parse("geo:${v.latitude},${v.longitude}?q=${v.latitude},${v.longitude}(${Uri.encode(v.label)})")
-    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
-        .onFailure { Toast.makeText(context, "Brak aplikacji nawigacyjnej", Toast.LENGTH_SHORT).show() }
-}
-
-private fun share(context: Context, v: Vehicle) {
-    val text = "${v.label} – ${v.state.label}, ${Fmt.dateTime(v.lastPositionTime)}\n" +
-        "https://www.openstreetmap.org/?mlat=${v.latitude}&mlon=${v.longitude}#map=16/${v.latitude}/${v.longitude}"
-    val intent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
-    context.startActivity(Intent.createChooser(intent, "Udostępnij lokalizację"))
+/** Otwiera pozycję pojazdu w aplikacji Google Maps (lub w przeglądarce, gdy aplikacji brak). */
+private fun openInGoogleMaps(context: Context, v: Vehicle) {
+    val uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=${v.latitude},${v.longitude}")
+    val intent = Intent(Intent.ACTION_VIEW, uri)
+    runCatching { context.startActivity(Intent(intent).setPackage("com.google.android.apps.maps")) }
+        .recoverCatching { context.startActivity(intent) }
+        .onFailure { Toast.makeText(context, "Nie można otworzyć Google Maps", Toast.LENGTH_SHORT).show() }
 }

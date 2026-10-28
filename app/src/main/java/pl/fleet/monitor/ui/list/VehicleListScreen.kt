@@ -64,15 +64,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
             },
             singleLine = true,
         )
-        Row(
-            Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(selected = ui.stateFilter == null, onClick = { vm.setFilter(null) }, label = { Text("Wszystkie (${ui.vehicles.size})") })
-            listOf(VehicleState.DRIVING, VehicleState.IDLE, VehicleState.PARKED, VehicleState.UNKNOWN).forEach { s ->
-                FilterChip(selected = ui.stateFilter == s, onClick = { vm.setFilter(s) }, label = { Text("${s.shortLabel} (${ui.count(s)})") })
-            }
-        }
+        Spacer(Modifier.size(8.dp))
         if (ui.loading && ui.vehicles.isEmpty()) LinearProgressIndicator(Modifier.fillMaxWidth())
 
         when {

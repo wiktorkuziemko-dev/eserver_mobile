@@ -3,6 +3,7 @@ package pl.fleet.monitor.ui.map
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -75,40 +76,47 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             onSelect = vm::select,
         )
 
-        // Pasek z dwoma przełącznikami: jadące / zaparkowane
+        // Pływające przełączniki (bez tła paska) + informacja o ostatniej aktualizacji
         Column(Modifier.align(Alignment.TopCenter).padding(12.dp).fillMaxWidth()) {
-            Card(
-                elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TypeToggle(
+                    icon = Icons.Filled.LocalShipping,
+                    label = "W ruchu",
+                    count = ui.drivingOnMap,
+                    color = VehicleState.DRIVING.color,
+                    checked = ui.showDriving,
+                    onClick = vm::toggleDriving,
+                )
+                Spacer(Modifier.width(8.dp))
+                TypeToggle(
+                    icon = Icons.Filled.LocalParking,
+                    label = "Zaparkowane",
+                    count = ui.parkedOnMap,
+                    color = VehicleState.PARKED.color,
+                    checked = ui.showParked,
+                    onClick = vm::toggleParked,
+                )
+            }
+            Spacer(Modifier.size(6.dp))
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                shadowElevation = 2.dp,
             ) {
-                Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TypeToggle(
-                        icon = Icons.Filled.LocalShipping,
-                        description = "Jadące",
-                        count = ui.drivingOnMap,
-                        color = VehicleState.DRIVING.color,
-                        checked = ui.showDriving,
-                        onClick = vm::toggleDriving,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    TypeToggle(
-                        icon = Icons.Filled.LocalParking,
-                        description = "Zaparkowane",
-                        count = ui.parkedOnMap,
-                        color = VehicleState.PARKED.color,
-                        checked = ui.showParked,
-                        onClick = vm::toggleParked,
-                    )
-                    Spacer(Modifier.weight(1f))
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (ui.loading) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
+                        CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        Spacer(Modifier.width(6.dp))
                     }
                     Text(
-                        ui.lastRefresh?.let { Fmt.timeSec(it) } ?: "…",
-                        style = MaterialTheme.typography.labelMedium,
+                        "Ostatnia aktualizacja: ",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                    Text(
+                        ui.lastRefresh?.let { Fmt.timeSec(it) } ?: "…",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
@@ -147,24 +155,28 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
 @Composable
 private fun TypeToggle(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    description: String,
+    label: String,
     count: Int,
     color: androidx.compose.ui.graphics.Color,
     checked: Boolean,
     onClick: () -> Unit,
 ) {
-    val bg = if (checked) color else MaterialTheme.colorScheme.surfaceVariant
+    val bg = if (checked) color else MaterialTheme.colorScheme.surface
     val fg = if (checked) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(50),
         color = bg,
+        shadowElevation = 3.dp,
+        border = BorderStroke(1.5.dp, if (checked) androidx.compose.ui.graphics.Color.White else color.copy(alpha = 0.6f)),
         modifier = Modifier.semantics { stateDescription = if (checked) "pokazane" else "ukryte" },
     ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, description, Modifier.size(22.dp), tint = fg)
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, Modifier.size(18.dp), tint = if (checked) fg else color)
             Spacer(Modifier.width(6.dp))
-            Text(count.toString(), color = fg, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(label, color = fg, style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.width(6.dp))
+            Text(count.toString(), color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }

@@ -90,10 +90,6 @@ private fun AppNavigation() {
                     vm = vm,
                     onBack = { nav.popBackStack() },
                     onHistory = { nav.navigate(Routes.history(id, vehicle.serial, vehicle.label)) },
-                    onShowOnMap = {
-                        fleetVm.showOnMap(id)
-                        nav.popBackStack(Routes.MAIN, inclusive = false)
-                    },
                     onRefresh = fleetVm::refresh,
                 )
             }

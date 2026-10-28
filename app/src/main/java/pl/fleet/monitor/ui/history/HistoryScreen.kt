@@ -125,8 +125,9 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
             }
             if (ui.loading) LinearProgressIndicator(Modifier.fillMaxWidth()) else Spacer(Modifier.size(4.dp))
 
+            val error = ui.error
             when {
-                ui.error != null -> ErrorState(ui.error, onRetry = vm::load)
+                error != null -> ErrorState(error, onRetry = vm::load)
                 ui.summary != null -> HistoryContent(ui)
             }
         }

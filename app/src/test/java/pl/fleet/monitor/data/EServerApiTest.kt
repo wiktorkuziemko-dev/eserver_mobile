@@ -151,3 +151,23 @@ class EServerApiTest {
         assertEquals(3, server.requestCount)
     }
 }
+
+class SerialFallbackTest {
+    @Test fun `serial with leading zero falls back to number without zeros`() = runTest {
+        ApiDates.zone = ZoneOffset.UTC
+        val server = MockWebServer().apply { start() }
+        val api = EServerApi(server.url("/api/").toString(), enforceModernTls = false)
+        val repo = FleetRepository({ api }) { Credentials.fromPlain("jan", "x") }
+        server.enqueue(MockResponse().setBody("""{"result":"ERROR","message":"No data"}"""))
+        server.enqueue(MockResponse().setBody("""{"result":"OK","data":{"distance":5,"driving_time":60,"parking_time":0,"details":[]}}"""))
+        server.enqueue(MockResponse().setBody("""{"result":"OK","data":{"distance":7,"driving_time":60,"parking_time":0,"details":[]}}"""))
+
+        assertEquals(5.0, repo.history("0123456", ZonedDateTime.now(), ZonedDateTime.now()).distanceKm, 0.001)
+        assertTrue(server.takeRequest().body.readUtf8().contains("serial=0123456"))
+        assertTrue(server.takeRequest().body.readUtf8().contains("serial=123456&"))
+        // Kolejne zapytanie od razu z działającym numerem
+        assertEquals(7.0, repo.history("0123456", ZonedDateTime.now(), ZonedDateTime.now()).distanceKm, 0.001)
+        assertTrue(server.takeRequest().body.readUtf8().contains("serial=123456&"))
+        server.shutdown()
+    }
+}

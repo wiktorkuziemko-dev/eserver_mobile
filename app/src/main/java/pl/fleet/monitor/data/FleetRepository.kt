@@ -23,12 +23,40 @@ class FleetRepository(
         mergeVehicles(devices.await(), positions.await())
     }
 
-    suspend fun status(serial: String, at: ZonedDateTime = ZonedDateTime.now()) = api.status(creds(), serial, at)
+    suspend fun status(serial: String, at: ZonedDateTime = ZonedDateTime.now()): MotionStatus =
+        withSerialFallback(serial, isEmpty = { false }) { api.status(creds(), it, at) }
 
-    suspend fun lastReport(serial: String) = api.lastReadingDate(creds(), serial)
+    suspend fun lastReport(serial: String): ZonedDateTime? =
+        withSerialFallback(serial, isEmpty = { it == null }) { api.lastReadingDate(creds(), it) }
 
-    suspend fun history(serial: String, from: ZonedDateTime, to: ZonedDateTime, details: Boolean = true) =
-        api.history(creds(), serial, from, to, details)
+    suspend fun history(serial: String, from: ZonedDateTime, to: ZonedDateTime, details: Boolean = true): HistorySummary =
+        withSerialFallback(serial, isEmpty = { it.entries.isEmpty() && it.distanceKm == 0.0 && it.drivingSeconds == 0L }) {
+            api.history(creds(), it, from, to, details)
+        }
+
+    /** Numer nadajnika, który zadziałał dla funkcji z datami (np. bez zer wiodących). */
+    private val workingSerial = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Lista pojazdów podaje numery nadajników z zerami wiodącymi (np. „0123456”), a funkcje
+     * status / history / last_reading_date znajdują dane tylko pod numerem bez nich („123456”).
+     * Gdy zapytanie z oryginalnym numerem nie zwróci danych, ponawiamy je z numerem bez zer
+     * i zapamiętujemy działający wariant.
+     */
+    private suspend fun <T> withSerialFallback(serial: String, isEmpty: (T) -> Boolean, call: suspend (String) -> T): T {
+        workingSerial[serial]?.let { return call(it) }
+        val alternative = serial.trimStart('0')
+        if (alternative == serial || alternative.isEmpty()) return call(serial)
+
+        val first = try {
+            call(serial)
+        } catch (e: ApiException.Server) {
+            return call(alternative).also { workingSerial[serial] = alternative }
+        }
+        if (!isEmpty(first)) return first.also { workingSerial[serial] = serial }
+        val second = runCatching { call(alternative) }.getOrNull() ?: return first
+        return if (isEmpty(second)) first else second.also { workingSerial[serial] = alternative }
+    }
 
     /** Zestaw zapytań diagnostycznych – każda funkcja z datą w trzech formatach. */
     suspend fun diagnostics(serial: String): String {

@@ -29,6 +29,7 @@ import pl.fleet.monitor.ui.details.VehicleDetailsViewModel
 import pl.fleet.monitor.ui.history.HistoryScreen
 import pl.fleet.monitor.ui.history.HistoryViewModel
 import pl.fleet.monitor.ui.login.LoginScreen
+import pl.fleet.monitor.ui.settings.MapVisibilityScreen
 import pl.fleet.monitor.ui.theme.FleetTheme
 
 class MainActivity : ComponentActivity() {
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
 private object Routes {
     const val LOGIN = "login"
     const val MAIN = "main"
+    const val VISIBILITY = "visibility"
     const val VEHICLE = "vehicle/{id}"
     const val HISTORY = "history/{id}?serial={serial}&label={label}"
     fun vehicle(id: String) = "vehicle/$id"
@@ -75,7 +77,15 @@ private fun AppNavigation() {
         composable(Routes.LOGIN) { LoginScreen(viewModel()) }
 
         composable(Routes.MAIN) {
-            MainScreen(fleetVm, onOpenVehicle = { nav.navigate(Routes.vehicle(it)) })
+            MainScreen(
+                fleetVm,
+                onOpenVehicle = { nav.navigate(Routes.vehicle(it)) },
+                onOpenVisibility = { nav.navigate(Routes.VISIBILITY) },
+            )
+        }
+
+        composable(Routes.VISIBILITY) {
+            MapVisibilityScreen(fleetVm, onBack = { nav.popBackStack() })
         }
 
         composable(Routes.VEHICLE, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->

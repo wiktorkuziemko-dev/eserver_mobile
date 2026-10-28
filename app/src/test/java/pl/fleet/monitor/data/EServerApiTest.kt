@@ -152,22 +152,26 @@ class EServerApiTest {
     }
 }
 
-class SerialFallbackTest {
-    @Test fun `serial with leading zero falls back to number without zeros`() = runTest {
+class SerialNormalizationTest {
+    @Test fun `serial is padded with leading zeros to 8 digits`() {
+        assertEquals("02000130", normalizeSerial("2000130"))
+        assertEquals("36001039", normalizeSerial("36001039"))
+        assertEquals("ABC123", normalizeSerial("ABC123"))
+        assertEquals("", normalizeSerial(""))
+    }
+
+    @Test fun `history request uses padded serial and name hides it`() = runTest {
         ApiDates.zone = ZoneOffset.UTC
         val server = MockWebServer().apply { start() }
         val api = EServerApi(server.url("/api/").toString(), enforceModernTls = false)
         val repo = FleetRepository({ api }) { Credentials.fromPlain("jan", "x") }
-        server.enqueue(MockResponse().setBody("""{"result":"ERROR","message":"No data"}"""))
         server.enqueue(MockResponse().setBody("""{"result":"OK","data":{"distance":5,"driving_time":60,"parking_time":0,"details":[]}}"""))
-        server.enqueue(MockResponse().setBody("""{"result":"OK","data":{"distance":7,"driving_time":60,"parking_time":0,"details":[]}}"""))
-
-        assertEquals(5.0, repo.history("0123456", ZonedDateTime.now(), ZonedDateTime.now()).distanceKm, 0.001)
-        assertTrue(server.takeRequest().body.readUtf8().contains("serial=0123456"))
-        assertTrue(server.takeRequest().body.readUtf8().contains("serial=123456&"))
-        // Kolejne zapytanie od razu z działającym numerem
-        assertEquals(7.0, repo.history("0123456", ZonedDateTime.now(), ZonedDateTime.now()).distanceKm, 0.001)
-        assertTrue(server.takeRequest().body.readUtf8().contains("serial=123456&"))
+        repo.history("2000130", ZonedDateTime.now(), ZonedDateTime.now())
+        assertTrue(server.takeRequest().body.readUtf8().contains("serial=02000130&"))
         server.shutdown()
+
+        val v = mergeVehicles(listOf(DeviceDto("d", "Ford Focus MK III 2000130 ZS 837GN", "2000130", "ZS 837GN")), emptyList()).first()
+        assertEquals("02000130", v.serial)
+        assertEquals("Ford Focus MK III ZS 837GN", v.displayName)
     }
 }

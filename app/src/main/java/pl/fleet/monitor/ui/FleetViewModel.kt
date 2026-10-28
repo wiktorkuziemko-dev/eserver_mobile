@@ -116,6 +116,10 @@ class FleetViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleDriving() = _ui.update { it.copy(showDriving = !it.showDriving).also { s -> session.showDriving = s.showDriving } }
+    fun showAllTypes() = _ui.update {
+        session.showDriving = true; session.showParked = true
+        it.copy(showDriving = true, showParked = true)
+    }
     fun toggleParked() = _ui.update { it.copy(showParked = !it.showParked).also { s -> session.showParked = s.showParked } }
 
     fun setOnMap(deviceId: String, visible: Boolean) = _ui.update {

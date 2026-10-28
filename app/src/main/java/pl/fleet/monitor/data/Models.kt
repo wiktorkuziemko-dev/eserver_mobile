@@ -100,7 +100,9 @@ data class Vehicle(
     /** Nazwa pojazdu bez numeru nadajnika GPS (API skleja go w deviceName: „model marka nr nr_rej.”). */
     val displayName: String
         get() {
-            val cleaned = if (serial.isBlank()) name else name.replace(serial, " ")
+            // Usuwamy numer w obu postaciach: z zerami wiodącymi i bez nich.
+            val cleaned = if (serial.isBlank()) name
+            else name.replace(serial, " ").replace(serial.trimStart('0').ifEmpty { serial }, " ")
             return cleaned.replace(Regex("\\s+"), " ").trim().ifBlank { plateNo }
         }
 }
@@ -129,6 +131,18 @@ data class HistorySummary(
     val entries: List<HistoryEntry>,
 )
 
+/** Długość numeru nadajnika GPS. */
+const val SERIAL_LENGTH = 8
+
+/**
+ * Numer nadajnika ma zawsze 8 cyfr, ale API gubi zera wiodące (np. „2000130” zamiast „02000130”).
+ * Uzupełniamy go zerami – zarówno do wyświetlania, jak i do zapytań status / history / last_reading_date.
+ */
+fun normalizeSerial(serial: String): String {
+    val s = serial.trim()
+    return if (s.isNotEmpty() && s.length < SERIAL_LENGTH && s.all { it.isDigit() }) s.padStart(SERIAL_LENGTH, '0') else s
+}
+
 fun mergeVehicles(devices: List<DeviceDto>, positions: List<PositionDto>): List<Vehicle> {
     val posById = positions.associateBy { it.deviceId }
     val known = devices.map { d ->
@@ -146,7 +160,7 @@ private fun buildVehicle(id: String, name: String?, plate: String?, serial: Stri
     deviceId = id,
     name = name.orEmpty(),
     plateNo = plate.orEmpty(),
-    serial = serial.orEmpty(),
+    serial = normalizeSerial(serial.orEmpty()),
     latitude = p?.coordinate?.latitude,
     longitude = p?.coordinate?.longitude,
     heading = p?.heading ?: 0,

@@ -97,27 +97,8 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
                             )
                         }
                     }
-                    if (ui.vehicles.isNotEmpty()) {
-                        item {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Na mapie: ${ui.vehicles.size - ui.hidden.count { id -> ui.vehicles.any { it.deviceId == id } }} z ${ui.vehicles.size}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                TextButton(onClick = { vm.setAllOnMap(true) }) { Text("Pokaż wszystkie") }
-                                TextButton(onClick = { vm.setAllOnMap(false) }) { Text("Ukryj wszystkie") }
-                            }
-                        }
-                    }
                     items(ui.filtered, key = { it.deviceId }) { v ->
-                        VehicleRow(
-                            v,
-                            onMap = v.deviceId !in ui.hidden,
-                            onMapChange = { visible -> vm.setOnMap(v.deviceId, visible) },
-                            onClick = { onOpenVehicle(v.deviceId) },
-                        )
+                        VehicleRow(v, onClick = { onOpenVehicle(v.deviceId) })
                     }
                 }
             }
@@ -126,7 +107,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
 }
 
 @Composable
-private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Unit, onClick: () -> Unit) {
+private fun VehicleRow(v: Vehicle, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -165,10 +146,7 @@ private fun VehicleRow(v: Vehicle, onMap: Boolean, onMapChange: (Boolean) -> Uni
                     )
                 }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Switch(checked = onMap, onCheckedChange = onMapChange)
-                Text("Pokazuj na mapie", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
     }

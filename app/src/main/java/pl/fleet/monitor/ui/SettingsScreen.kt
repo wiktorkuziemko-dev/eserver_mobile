@@ -14,6 +14,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -37,7 +39,8 @@ import pl.fleet.monitor.BuildConfig
 import pl.fleet.monitor.ui.components.SectionTitle
 
 @Composable
-fun SettingsScreen(vm: FleetViewModel, modifier: Modifier = Modifier) {
+fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: Modifier = Modifier) {
+    val fleet by vm.ui.collectAsStateWithLifecycle()
     val creds by vm.session.credentials.collectAsStateWithLifecycle()
     var interval by remember { mutableIntStateOf(vm.session.refreshIntervalSec) }
     var confirmLogout by remember { mutableStateOf(false) }
@@ -59,6 +62,21 @@ fun SettingsScreen(vm: FleetViewModel, modifier: Modifier = Modifier) {
                     Text(vm.session.baseUrl, style = MaterialTheme.typography.bodySmall,
                         color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
                 }
+            }
+        }
+
+        SectionTitle("Mapa")
+        Card(onClick = onOpenVisibility, modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Visibility, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.size(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Pojazdy widoczne na mapie", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    val visible = fleet.vehicles.count { it.deviceId !in fleet.hidden }
+                    Text("$visible z ${fleet.vehicles.size}", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

@@ -22,7 +22,7 @@ import pl.fleet.monitor.ui.list.VehicleListScreen
 import pl.fleet.monitor.ui.map.MapScreen
 
 @Composable
-fun MainScreen(vm: FleetViewModel, onOpenVehicle: (String) -> Unit) {
+fun MainScreen(vm: FleetViewModel, onOpenVehicle: (String) -> Unit, onOpenVisibility: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     pl.fleet.monitor.ui.components.StatusBarIcons(white = false)
@@ -53,7 +53,7 @@ fun MainScreen(vm: FleetViewModel, onOpenVehicle: (String) -> Unit) {
         when (ui.tab) {
             MainTab.MAP -> MapScreen(vm, ui, onOpenVehicle, modifier)
             MainTab.LIST -> VehicleListScreen(vm, ui, onOpenVehicle, modifier)
-            MainTab.SETTINGS -> SettingsScreen(vm, modifier)
+            MainTab.SETTINGS -> SettingsScreen(vm, onOpenVisibility, modifier)
         }
     }
 }

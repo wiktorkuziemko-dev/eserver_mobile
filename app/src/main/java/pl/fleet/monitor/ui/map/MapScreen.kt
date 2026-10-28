@@ -28,7 +28,9 @@ import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.semantics
@@ -120,6 +122,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                     )
                 }
             }
+            HiddenInfo(ui, onShowAll = vm::showAllTypes, onOpenSettings = { vm.setTab(pl.fleet.monitor.ui.MainTab.SETTINGS) })
             ui.error?.let { err ->
                 Spacer(Modifier.size(8.dp))
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
@@ -151,6 +154,47 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
     }
 }
 
+/** Informacja, że część pojazdów jest ukryta – z szybkim przywróceniem. */
+@Composable
+private fun HiddenInfo(ui: FleetUiState, onShowAll: () -> Unit, onOpenSettings: () -> Unit) {
+    val hiddenTypes = buildList {
+        if (!ui.showDriving) add("w ruchu (${ui.drivingOnMap})")
+        if (!ui.showParked) add("zaparkowane (${ui.parkedOnMap})")
+    }
+    val hiddenInSettings = ui.vehicles.count { it.deviceId in ui.hidden }
+    if (hiddenTypes.isEmpty() && hiddenInSettings == 0) return
+    Spacer(Modifier.size(6.dp))
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = androidx.compose.ui.graphics.Color(0xFFFFF4E0),
+        border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFFFCC80)),
+        shadowElevation = 2.dp,
+    ) {
+        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.VisibilityOff, null, Modifier.size(16.dp), tint = androidx.compose.ui.graphics.Color(0xFF9A5B00))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f, fill = false)) {
+                if (hiddenTypes.isNotEmpty()) {
+                    Text("Ukryte na mapie: ${hiddenTypes.joinToString(", ")}", style = MaterialTheme.typography.labelMedium)
+                }
+                if (hiddenInSettings > 0) {
+                    Text(
+                        "Wyłączone w ustawieniach: $hiddenInSettings",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable(onClick = onOpenSettings),
+                    )
+                }
+            }
+            if (hiddenTypes.isNotEmpty()) {
+                TextButton(onClick = onShowAll) { Text("Pokaż wszystkie") }
+            } else {
+                TextButton(onClick = onOpenSettings) { Text("Ustawienia") }
+            }
+        }
+    }
+}
+
 /** Przełącznik typu pojazdów: ikona + liczba; wyłączony = wyszarzony. */
 @Composable
 private fun TypeToggle(
@@ -177,9 +221,16 @@ private fun TypeToggle(
                 .padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, null, Modifier.size(18.dp), tint = if (checked) fg else color)
+            // Wyłączony filtr: przekreślone oko i przekreślony opis – widać, że te auta są ukryte.
+            Icon(
+                if (checked) icon else Icons.Outlined.VisibilityOff, null,
+                Modifier.size(18.dp), tint = if (checked) fg else color,
+            )
             Spacer(Modifier.width(6.dp))
-            Text(label, color = fg, style = MaterialTheme.typography.labelLarge)
+            Text(
+                label, color = fg, style = MaterialTheme.typography.labelLarge,
+                textDecoration = if (checked) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
+            )
             Spacer(Modifier.width(6.dp))
             Text(count.toString(), color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }

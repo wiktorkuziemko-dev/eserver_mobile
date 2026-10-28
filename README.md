@@ -1,4 +1,4 @@
-# E-SERVER PRO – aplikacja Android dla API E-SERVER
+# E-SERVER mini – aplikacja Android dla API E-SERVER
 
 Aplikacja natywna (Kotlin + Jetpack Compose) pokazująca bieżący stan pojazdów na mapie
 na podstawie API platformy E-SERVER (specyfikacja v2.0.0).

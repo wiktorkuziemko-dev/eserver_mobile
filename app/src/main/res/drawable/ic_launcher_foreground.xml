@@ -18,12 +18,14 @@
     <!-- Biały pierścień -->
     <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3"
         android:pathData="M45,44a6,6 0 1,0 12,0a6,6 0 1,0 -12,0" />
-    <!-- Grafitowa plakietka PRO -->
+    <!-- Grafitowa plakietka „mini” -->
     <path android:fillColor="#FF26262A" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.2"
         android:pathData="M64.25,64h13.5a5.25,5.25 0 0,1 0,10.5h-13.5a5.25,5.25 0 0,1 0,-10.5z" />
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.25"
+    <!-- Litery m, i, n, i rysowane kreską (Android nie obsługuje tekstu w ikonach) -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.15"
         android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M64.2,71.8V66.6H66.4A1.4,1.4 0 0,1 66.4,69.4H64.2
-            M68.6,71.8V66.6H70.8A1.4,1.4 0 0,1 70.8,69.4H68.6M70.4,69.4L71.9,71.8
-            M75.6,66.6A1.9,2.6 0 1,1 75.6,71.8A1.9,2.6 0 1,1 75.6,66.6" />
+        android:pathData="M64.45,71.8V67.9M64.45,68.8C64.45,67.3 67.15,67.3 67.15,68.8V71.8M67.15,68.8C67.15,67.3 69.85,67.3 69.85,68.8V71.8
+            M71.45,67.9V71.8M71.45,66.3V66.35
+            M73.25,71.8V67.9M73.25,68.8C73.25,67.3 75.95,67.3 75.95,68.8V71.8
+            M77.55,67.9V71.8M77.55,66.3V66.35" />
 </vector>

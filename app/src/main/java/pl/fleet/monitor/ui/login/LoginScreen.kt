@@ -18,7 +18,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -31,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Visibility
@@ -58,10 +60,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -96,16 +94,14 @@ fun LoginScreen(vm: LoginViewModel) {
 
     StatusBarIcons(white = true)
     Box(Modifier.fillMaxSize().background(SoftBackground)) {
-        // Grafika w dolnej części ekranu (pod klawiaturą, gdy jest otwarta)
-        RouteIllustration(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(300.dp))
-
         // Nagłówek z gradientem marki – niższy niż wcześniej, żeby formularz był wyżej
         Box(
             Modifier.fillMaxWidth().height(220.dp)
                 .background(BrandGradient, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)),
         )
 
-        Box(Modifier.fillMaxSize().systemBarsPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.fillMaxSize().imePadding()) {
+          Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier.widthIn(max = 460.dp).fillMaxWidth().verticalScroll(rememberScrollState())
                     .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 20.dp),
@@ -121,7 +117,7 @@ fun LoginScreen(vm: LoginViewModel) {
                     }
                     Spacer(Modifier.width(14.dp))
                     Column {
-                        Text("E-SERVER PRO", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = Color.White)
+                        Text("E-SERVER mini", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = Color.White)
                         AnimatedVisibility(!keyboardOpen) {
                             Text(
                                 "Monitoring floty w czasie rzeczywistym",
@@ -231,77 +227,65 @@ fun LoginScreen(vm: LoginViewModel) {
                     textAlign = TextAlign.Center,
                 )
             }
+          }
+          // Stopka z falami i opisem aplikacji – chowa się, gdy otwarta jest klawiatura
+          AnimatedVisibility(!keyboardOpen) { WavesFooter() }
         }
     }
 }
 
 /**
- * Dekoracja dolnej części ekranu: delikatna siatka ulic, trasa przerywaną linią
- * w kolorze marki i pinezki na przystankach. Górna krawędź płynnie zanika w tło.
+ * Stopka ekranu logowania: miękkie fale w kolorze marki (nawiązanie do zaokrąglonego nagłówka)
+ * i krótki opis aplikacji z ikoną informacji.
  */
 @Composable
-private fun RouteIllustration(modifier: Modifier = Modifier) {
-    val street = Color(0xFFE2E4E8)
-    val streetMajor = Color(0xFFD9DCE1)
-    val route = Color(0xFFD32F2F)
-    val fadeTo = Color(0xFFF7F7F8)
-    Canvas(modifier) {
-        val w = size.width
-        val h = size.height
-
-        // Siatka ulic (lekko skośna) i dwie główne arterie
-        val step = 46.dp.toPx()
-        var x = -h
-        while (x < w + h) {
-            drawLine(street, Offset(x, h), Offset(x + h * 0.35f, 0f), strokeWidth = 2.dp.toPx())
-            x += step
+private fun WavesFooter() {
+    Box(Modifier.fillMaxWidth()) {
+        Canvas(Modifier.matchParentSize()) {
+            val w = size.width
+            val h = size.height
+            val brand = Brush.linearGradient(listOf(Color(0xFFEF5350), Color(0xFFA31515)), Offset.Zero, Offset(w, h))
+            fun wave(top: Float, c1: Float, c2: Float, end: Float) = Path().apply {
+                moveTo(0f, h * top)
+                cubicTo(w * 0.25f, h * c1, w * 0.55f, h * c2, w, h * end)
+                lineTo(w, h)
+                lineTo(0f, h)
+                close()
+            }
+            drawPath(wave(0.10f, -0.05f, 0.30f, 0.02f), brand, alpha = 0.07f)
+            drawPath(wave(0.34f, 0.18f, 0.52f, 0.26f), brand, alpha = 0.12f)
+            // Pełny pas u dołu – sięga pod pasek nawigacji
+            val strip = 14.dp.toPx()
+            drawPath(
+                Path().apply {
+                    moveTo(0f, h - strip - 6.dp.toPx())
+                    cubicTo(w * 0.35f, h - strip + 4.dp.toPx(), w * 0.65f, h - strip - 12.dp.toPx(), w, h - strip - 2.dp.toPx())
+                    lineTo(w, h)
+                    lineTo(0f, h)
+                    close()
+                },
+                brand,
+            )
         }
-        var y = h * 0.15f
-        while (y < h) {
-            drawLine(street, Offset(0f, y + 18.dp.toPx()), Offset(w, y - 10.dp.toPx()), strokeWidth = 2.dp.toPx())
-            y += step * 0.8f
+        Row(
+            Modifier
+                .navigationBarsPadding()
+                .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 34.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                Icons.Outlined.Info, null,
+                Modifier.padding(top = 1.dp).size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "E-SERVER mini to lekka i nowoczesna mobilna wersja webowej aplikacji E-SERVER do szybkiego " +
+                    "podglądu bieżącej pozycji Twoich pojazdów i statystyk na telefonie. Jeżeli szukasz " +
+                    "zaawansowanych funkcjonalności, skorzystaj z webowej wersji platformy.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF3F4045),
+            )
         }
-        drawLine(streetMajor, Offset(0f, h * 0.82f), Offset(w, h * 0.55f), strokeWidth = 8.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(streetMajor, Offset(w * 0.62f, h), Offset(w * 0.78f, 0f), strokeWidth = 6.dp.toPx(), cap = StrokeCap.Round)
-
-        // Trasa
-        val p = Path().apply {
-            moveTo(w * 0.08f, h * 0.92f)
-            cubicTo(w * 0.28f, h * 0.70f, w * 0.30f, h * 0.48f, w * 0.48f, h * 0.52f)
-            cubicTo(w * 0.66f, h * 0.56f, w * 0.70f, h * 0.30f, w * 0.90f, h * 0.36f)
-        }
-        drawPath(p, route.copy(alpha = 0.18f), style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round))
-        drawPath(
-            p, route.copy(alpha = 0.75f),
-            style = Stroke(
-                width = 3.dp.toPx(), cap = StrokeCap.Round,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 7.dp.toPx())),
-            ),
-        )
-        drawStop(Offset(w * 0.08f, h * 0.92f), Color(0xFF2E9E44))
-        drawStop(Offset(w * 0.48f, h * 0.52f), Color(0xFFF59300))
-        drawPin(Offset(w * 0.90f, h * 0.36f), route)
-
-        // Zanikanie u góry – grafika łagodnie wtapia się w tło
-        drawRect(Brush.verticalGradient(0f to fadeTo, 0.45f to fadeTo.copy(alpha = 0f), startY = 0f, endY = h))
     }
-}
-
-private fun DrawScope.drawStop(c: Offset, color: Color) {
-    drawCircle(Color.White, radius = 9.dp.toPx(), center = c)
-    drawCircle(color, radius = 6.dp.toPx(), center = c)
-}
-
-private fun DrawScope.drawPin(tip: Offset, color: Color) {
-    val r = 11.dp.toPx()
-    val cy = tip.y - r * 2.1f
-    val pin = Path().apply {
-        moveTo(tip.x, tip.y)
-        cubicTo(tip.x - r * 0.6f, tip.y - r * 0.9f, tip.x - r, cy + r * 0.7f, tip.x - r, cy)
-        arcTo(androidx.compose.ui.geometry.Rect(tip.x - r, cy - r, tip.x + r, cy + r), 180f, 180f, false)
-        cubicTo(tip.x + r, cy + r * 0.7f, tip.x + r * 0.6f, tip.y - r * 0.9f, tip.x, tip.y)
-        close()
-    }
-    drawPath(pin, color)
-    drawCircle(Color.White, radius = r * 0.42f, center = Offset(tip.x, cy))
 }

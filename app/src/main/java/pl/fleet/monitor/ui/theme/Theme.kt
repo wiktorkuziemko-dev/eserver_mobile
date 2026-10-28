@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Color
 
 val BrandRed = Color(0xFFD32F2F)
 
-/** Jasny, czerwono-biały motyw E-SERVER PRO – niezależny od trybu ciemnego i kolorów tapety. */
+/** Jasny, czerwono-biały motyw E-SERVER mini – niezależny od trybu ciemnego i kolorów tapety. */
 private val Colors = lightColorScheme(
     primary = BrandRed,
     onPrimary = Color.White,

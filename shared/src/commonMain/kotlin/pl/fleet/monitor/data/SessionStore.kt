@@ -13,7 +13,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * Gdy go brak (uszkodzony magazyn kluczy), hasło nie jest zapamiętywane.
  * [prefs] – zwykłe ustawienia widoku (filtry, ukryte pojazdy, ikony, opisy).
  */
-class SessionStore(private val prefs: Settings, private val secure: Settings?) {
+class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
+
+    // Błąd magazynu zaszyfrowanego (np. brak dostępu do pęku kluczy) nie może zamknąć aplikacji.
+    private val secure: Settings? = secureSettings?.let(::SafeSettings)
 
     private val _credentials = MutableStateFlow(loadAutoLogin())
     val credentials: StateFlow<Credentials?> = _credentials.asStateFlow()
@@ -119,4 +122,31 @@ class SessionStore(private val prefs: Settings, private val secure: Settings?) {
         /** Format zapisu zbioru – używany przez migrację na Androidzie. */
         fun encodeList(values: Collection<String>): String = values.joinToString(SEP)
     }
+}
+
+/** Ustawienia, które przy błędzie zapisu/odczytu zachowują się jak puste zamiast rzucać wyjątek. */
+private class SafeSettings(private val d: Settings) : Settings {
+    override val keys: Set<String> get() = runCatching { d.keys }.getOrDefault(emptySet())
+    override val size: Int get() = runCatching { d.size }.getOrDefault(0)
+    override fun clear() { runCatching { d.clear() } }
+    override fun remove(key: String) { runCatching { d.remove(key) } }
+    override fun hasKey(key: String) = runCatching { d.hasKey(key) }.getOrDefault(false)
+    override fun putInt(key: String, value: Int) { runCatching { d.putInt(key, value) } }
+    override fun getInt(key: String, defaultValue: Int) = runCatching { d.getInt(key, defaultValue) }.getOrDefault(defaultValue)
+    override fun getIntOrNull(key: String) = runCatching { d.getIntOrNull(key) }.getOrNull()
+    override fun putLong(key: String, value: Long) { runCatching { d.putLong(key, value) } }
+    override fun getLong(key: String, defaultValue: Long) = runCatching { d.getLong(key, defaultValue) }.getOrDefault(defaultValue)
+    override fun getLongOrNull(key: String) = runCatching { d.getLongOrNull(key) }.getOrNull()
+    override fun putString(key: String, value: String) { runCatching { d.putString(key, value) } }
+    override fun getString(key: String, defaultValue: String) = runCatching { d.getString(key, defaultValue) }.getOrDefault(defaultValue)
+    override fun getStringOrNull(key: String) = runCatching { d.getStringOrNull(key) }.getOrNull()
+    override fun putFloat(key: String, value: Float) { runCatching { d.putFloat(key, value) } }
+    override fun getFloat(key: String, defaultValue: Float) = runCatching { d.getFloat(key, defaultValue) }.getOrDefault(defaultValue)
+    override fun getFloatOrNull(key: String) = runCatching { d.getFloatOrNull(key) }.getOrNull()
+    override fun putDouble(key: String, value: Double) { runCatching { d.putDouble(key, value) } }
+    override fun getDouble(key: String, defaultValue: Double) = runCatching { d.getDouble(key, defaultValue) }.getOrDefault(defaultValue)
+    override fun getDoubleOrNull(key: String) = runCatching { d.getDoubleOrNull(key) }.getOrNull()
+    override fun putBoolean(key: String, value: Boolean) { runCatching { d.putBoolean(key, value) } }
+    override fun getBoolean(key: String, defaultValue: Boolean) = runCatching { d.getBoolean(key, defaultValue) }.getOrDefault(defaultValue)
+    override fun getBooleanOrNull(key: String) = runCatching { d.getBooleanOrNull(key) }.getOrNull()
 }

@@ -14,8 +14,10 @@ fun MainViewController(): UIViewController {
     AppGraph.init(
         AppContainer(
             settings = NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults),
-            // Login, hasło i skrót MD5 trafiają do pęku kluczy iOS.
-            secureSettings = KeychainSettings(service = "pl.fleet.monitor"),
+            // Login, hasło i skrót MD5 trafiają do pęku kluczy iOS (null, gdy pęk kluczy jest niedostępny).
+            secureSettings = KeychainSettings(service = "pl.fleet.monitor").takeIf { keychain ->
+                runCatching { keychain.getStringOrNull("probe") }.isSuccess
+            },
             appVersion = NSBundle.mainBundle.infoDictionary?.get("CFBundleShortVersionString") as? String ?: "",
         ),
     )

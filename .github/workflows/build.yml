@@ -53,7 +53,7 @@ jobs:
           set -o pipefail
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath iosApp/build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
+            -derivedDataPath iosApp/build CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build 2>&1 | tee build.log
       - name: Raport błędów
         if: failure()
         run: .github/scripts/report-errors.sh build.log

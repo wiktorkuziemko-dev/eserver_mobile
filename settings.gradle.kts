@@ -14,4 +14,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "FleetMonitor"
+include(":shared")
 include(":app")

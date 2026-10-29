@@ -1,0 +1,23 @@
+package pl.fleet.monitor
+
+import androidx.compose.ui.window.ComposeUIViewController
+import com.russhwolf.settings.ExperimentalSettingsImplementation
+import com.russhwolf.settings.KeychainSettings
+import com.russhwolf.settings.NSUserDefaultsSettings
+import platform.Foundation.NSBundle
+import platform.Foundation.NSUserDefaults
+import platform.UIKit.UIViewController
+
+/** Punkt wejścia dla iOS – wywoływany z aplikacji SwiftUI (iosApp). */
+@OptIn(ExperimentalSettingsImplementation::class)
+fun MainViewController(): UIViewController {
+    AppGraph.init(
+        AppContainer(
+            settings = NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults),
+            // Login, hasło i skrót MD5 trafiają do pęku kluczy iOS.
+            secureSettings = KeychainSettings(service = "pl.fleet.monitor"),
+            appVersion = NSBundle.mainBundle.infoDictionary?.get("CFBundleShortVersionString") as? String ?: "",
+        ),
+    )
+    return ComposeUIViewController { App() }
+}

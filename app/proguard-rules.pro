@@ -7,15 +7,13 @@
 }
 -keep,includedescriptorclasses class pl.fleet.monitor.**$$serializer { *; }
 
-# OkHttp
+# Ktor / OkHttp
+-dontwarn org.slf4j.**
+-dontwarn java.lang.management.**
 -dontwarn okhttp3.internal.platform.**
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
-
-# osmdroid
--dontwarn org.osmdroid.**
--keep class org.osmdroid.** { *; }
 
 # security-crypto / Tink
 -dontwarn com.google.errorprone.annotations.**

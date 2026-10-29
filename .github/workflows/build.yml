@@ -20,7 +20,7 @@ jobs:
       - name: Testy i APK
         run: |
           set -o pipefail
-          ./gradlew --no-daemon :shared:testDebugUnitTest :app:assembleDebug :app:assembleRelease 2>&1 | tee build.log
+          ./gradlew --no-daemon :shared:testAndroidHostTest :app:assembleDebug :app:assembleRelease 2>&1 | tee build.log
       - name: Raport błędów
         if: failure()
         run: .github/scripts/report-errors.sh build.log

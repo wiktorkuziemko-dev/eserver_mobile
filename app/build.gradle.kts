@@ -1,14 +1,11 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "pl.fleet.monitor"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "pl.fleet.monitor"
@@ -38,12 +35,8 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
-}
-
 dependencies {
     implementation(project(":shared"))
-    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }

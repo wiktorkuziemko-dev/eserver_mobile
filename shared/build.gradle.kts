@@ -2,14 +2,19 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    id("com.android.library")
+    id("com.android.kotlin.multiplatform.library")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 kotlin {
-    androidTarget {
+    android {
+        namespace = "pl.fleet.monitor.shared"
+        compileSdk = 37
+        minSdk = 26
+        // Testy z commonTest uruchamiane na JVM (zadanie :shared:testAndroidHostTest)
+        withHostTestBuilder {}
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
@@ -59,7 +64,7 @@ kotlin {
         androidMain.dependencies {
             implementation("io.ktor:ktor-client-okhttp:3.6.1")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-            implementation("androidx.core:core-ktx:1.16.0")
+            implementation("androidx.core:core-ktx:1.19.1")
         }
         iosMain.dependencies {
             implementation("io.ktor:ktor-client-darwin:3.6.1")
@@ -67,14 +72,3 @@ kotlin {
     }
 }
 
-android {
-    namespace = "pl.fleet.monitor.shared"
-    compileSdk = 36
-    defaultConfig {
-        minSdk = 26
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}

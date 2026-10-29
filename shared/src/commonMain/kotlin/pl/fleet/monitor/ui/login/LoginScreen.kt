@@ -15,7 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -80,7 +81,8 @@ import pl.fleet.monitor.ui.theme.SoftBackground
 fun LoginScreen(vm: LoginViewModel) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    val keyboardOpen = WindowInsets.isImeVisible
+    // Klawiatura otwarta = dolny odstęp IME większy od zera (działa na Androidzie i iOS).
+    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val buttonRequester = remember { BringIntoViewRequester() }
 
     // Po otwarciu klawiatury przewijamy tak, aby przycisk „Zaloguj się” był widoczny nad nią.

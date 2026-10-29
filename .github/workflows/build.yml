@@ -10,6 +10,11 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -17,10 +22,23 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v5
-      - name: Testy i APK
+      - name: Klucz przesyłania Google Play
+        id: keystore
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Google Play::Brak klucza przesyłania – plik AAB nie zostanie zbudowany."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Testy, APK i AAB
         run: |
           set -o pipefail
-          ./gradlew --no-daemon :shared:testAndroidHostTest :app:assembleDebug :app:assembleRelease 2>&1 | tee build.log
+          TASKS=":shared:testAndroidHostTest :app:assembleDebug :app:assembleRelease"
+          if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then TASKS="$TASKS :app:bundleRelease"; fi
+          ./gradlew --no-daemon $TASKS 2>&1 | tee build.log
       - name: Raport błędów
         if: failure()
         run: .github/scripts/report-errors.sh build.log
@@ -29,6 +47,11 @@ jobs:
         with:
           name: fleet-monitor-apk
           path: app/build/outputs/apk/**/*.apk
+      - uses: actions/upload-artifact@v4
+        if: success() && steps.keystore.outputs.signed == 'true'
+        with:
+          name: fleet-monitor-aab-google-play
+          path: app/build/outputs/bundle/release/*.aab
 
   ios:
     runs-on: macos-latest

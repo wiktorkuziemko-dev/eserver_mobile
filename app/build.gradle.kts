@@ -11,17 +11,30 @@ android {
         applicationId = "pl.fleet.monitor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
+        // Każde wydanie z GitHuba ma kolejny numer (Google Play wymaga rosnącego versionCode).
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.plus(100) ?: 14
         versionName = "2.1.0"
+    }
+
+    // Klucz przesyłania do Google Play – z sekretów GitHuba (ścieżka do pliku i hasła w zmiennych środowiskowych).
+    val uploadKeystore = System.getenv("ANDROID_KEYSTORE_PATH")?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (uploadKeystore != null) {
+            create("upload") {
+                storeFile = uploadKeystore
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Do testów podpisujemy wersję release kluczem debug – przed publikacją w Google Play
-            // należy skonfigurować własny keystore.
-            signingConfig = signingConfigs.getByName("debug")
+            // Klucz przesyłania, gdy jest skonfigurowany; w przeciwnym razie klucz testowy (tylko do instalacji APK).
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
 

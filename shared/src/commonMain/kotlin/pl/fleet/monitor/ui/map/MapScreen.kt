@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.CenterFocusStrong
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.LocalParking
+import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.GpsNotFixed
 import androidx.compose.material.icons.outlined.Refresh
@@ -185,6 +187,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                 VehiclePreviewCard(
                     v,
                     following = ui.followId == v.deviceId,
+                    preview = ui.preview?.takeIf { it.deviceId == v.deviceId },
                     onFollow = { if (ui.followId == v.deviceId) vm.stopFollowing() else vm.follow(v.deviceId) },
                     onClose = { vm.select(null) },
                     onDetails = { onOpenVehicle(v.deviceId) },
@@ -292,6 +295,7 @@ private fun Segment(
 private fun VehiclePreviewCard(
     v: Vehicle,
     following: Boolean,
+    preview: pl.fleet.monitor.ui.PreviewInfo?,
     onFollow: () -> Unit,
     onClose: () -> Unit,
     onDetails: () -> Unit,
@@ -309,23 +313,23 @@ private fun VehiclePreviewCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                StateBadge(v.state, text = v.state.label)
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Zamknij") }
             }
             Spacer(Modifier.size(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StateBadge(v.state, text = v.state.label)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Speed, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(Fmt.speed(v.speed), style = MaterialTheme.typography.bodyMedium)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Schedule, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(Fmt.ago(v.lastPositionTime), style = MaterialTheme.typography.bodyMedium,
-                        color = if (Fmt.isStale(v.lastPositionTime)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ArcGauge(v.speed.toFloat(), SPEED_MAX, v.speed.toString(), "km/h", VehicleState.DRIVING.color, Modifier.weight(1f))
+                ArcGauge(
+                    v.rpm?.toFloat(), RPM_MAX, v.rpm?.let { Fmt.decimal(it / 1000.0, 1) }, "obr. ×1000",
+                    androidx.compose.ui.graphics.Color(0xFF1A5DBF), Modifier.weight(1f),
+                )
+                ArcGauge(
+                    v.fuelPercent?.toFloat(), 100f, v.fuelPercent?.let { "$it%" }, "paliwo",
+                    VehicleState.PARKED.color, Modifier.weight(1f),
+                )
             }
+            Spacer(Modifier.size(10.dp))
+            StatusField(v, preview)
             Spacer(Modifier.size(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (following) {
@@ -348,5 +352,75 @@ private fun VehiclePreviewCard(
                 }
             }
         }
+    }
+}
+
+private const val SPEED_MAX = 160f
+private const val RPM_MAX = 6000f
+
+/** Półokrągły zegar; brak wartości (null) – szary łuk i „—”. */
+@Composable
+private fun ArcGauge(value: Float?, max: Float, text: String?, unit: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+    val track = MaterialTheme.colorScheme.surfaceVariant
+    val fraction = ((value ?: 0f) / max).coerceIn(0f, 1f)
+    Column(modifier.semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(width = 92.dp, height = 52.dp), contentAlignment = Alignment.BottomCenter) {
+            androidx.compose.foundation.Canvas(Modifier.size(width = 92.dp, height = 52.dp)) {
+                val stroke = 8.dp.toPx()
+                val d = size.width - stroke
+                val topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2)
+                val arcSize = androidx.compose.ui.geometry.Size(d, d)
+                val style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                drawArc(track, 180f, 180f, false, topLeft, arcSize, style = style)
+                if (value != null && fraction > 0f) drawArc(color, 180f, 180f * fraction, false, topLeft, arcSize, style = style)
+            }
+            Text(
+                text ?: "—",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (text == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        }
+        Text(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    }
+}
+
+/** Pole stanu pod zegarami: „W ruchu od 2 h 41 min” / „Postój od 33 min” + czas ostatniego raportu. */
+@Composable
+private fun StatusField(v: Vehicle, preview: pl.fleet.monitor.ui.PreviewInfo?) {
+    val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
+    val driving = status?.motion ?: (v.state == VehicleState.DRIVING)
+    val stateColor = if (driving) VehicleState.DRIVING.color else VehicleState.PARKED.color
+    val bg = if (driving) androidx.compose.ui.graphics.Color(0xFFF1F8F2) else androidx.compose.ui.graphics.Color(0xFFFFF6EA)
+    val title = when {
+        status?.begin != null -> (if (driving) "W ruchu od " else "Postój od ") + Fmt.duration((pl.fleet.monitor.data.now() - status.begin).inWholeSeconds)
+        preview?.status is pl.fleet.monitor.ui.details.Loadable.Loading -> if (driving) "W ruchu" else "Postój"
+        else -> (if (driving) "W ruchu" else "Postój") + " (według ostatniej pozycji)"
+    }
+    val report = when (val r = preview?.lastReport) {
+        is pl.fleet.monitor.ui.details.Loadable.Ready -> r.value
+        else -> null
+    } ?: v.lastPositionTime
+    val since = status?.begin?.let { "od ${Fmt.smartTime(it)} · " }.orEmpty()
+    Column(
+        Modifier.fillMaxWidth()
+            .background(bg, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (driving) Icons.Outlined.Route else Icons.Outlined.LocalParking, null, Modifier.size(18.dp), tint = stateColor)
+            Spacer(Modifier.width(8.dp))
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = stateColor)
+            if (preview?.status is pl.fleet.monitor.ui.details.Loadable.Loading) {
+                Spacer(Modifier.width(8.dp))
+                CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+            }
+        }
+        Text(
+            "${since}ostatni raport: ${Fmt.smartTime(report)} (${Fmt.ago(report)})",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (Fmt.isStale(report)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

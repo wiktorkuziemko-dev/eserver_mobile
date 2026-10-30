@@ -15,6 +15,8 @@ import pl.fleet.monitor.data.now
 import pl.fleet.monitor.data.ApiException
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.data.VehicleState
+import pl.fleet.monitor.data.MotionStatus
+import pl.fleet.monitor.ui.details.Loadable
 import pl.fleet.monitor.ui.map.FleetMapState
 import kotlin.time.Instant
 
@@ -38,6 +40,8 @@ data class FleetUiState(
     val markerScale: Float = 1f,
     /** Pojazd śledzony na mapie (mapa podąża za nim po każdym odświeżeniu). */
     val followId: String? = null,
+    /** Stan i ostatni raport zaznaczonego pojazdu – do kafelka na mapie. */
+    val preview: PreviewInfo? = null,
 ) {
     /** Opis pojazdu na mapie: własny z ustawień albo nazwa pojazdu. */
     fun mapLabel(v: Vehicle): String = customLabels[v.deviceId] ?: v.displayName.ifBlank { v.label }
@@ -65,6 +69,12 @@ data class FleetUiState(
         get() = onMap.filter { it.deviceId == followId || if (it.state == VehicleState.DRIVING) showDriving else showParked }
 }
 
+data class PreviewInfo(
+    val deviceId: String,
+    val status: Loadable<MotionStatus> = Loadable.Loading,
+    val lastReport: Loadable<Instant?> = Loadable.Loading,
+)
+
 /** Współdzielony stan floty – wykorzystywany przez mapę, listę i szczegóły pojazdu. */
 /** Pozycje pojazdów odświeżane są zawsze co 30 sekund. */
 private const val REFRESH_INTERVAL_MS = 30_000L
@@ -81,6 +91,31 @@ class FleetViewModel : ViewModel() {
     val mapState = FleetMapState()
 
     private var refreshJob: Job? = null
+    private var previewJob: Job? = null
+
+    /** Pobiera stan (jazda/postój od…) i ostatni raport zaznaczonego pojazdu. */
+    private fun loadPreview(keepOld: Boolean = false) {
+        previewJob?.cancel()
+        val v = _ui.value.selected
+        if (v == null || v.serial.isBlank()) {
+            _ui.update { it.copy(preview = null) }
+            return
+        }
+        if (!keepOld || _ui.value.preview?.deviceId != v.deviceId) _ui.update { it.copy(preview = PreviewInfo(v.deviceId)) }
+        previewJob = viewModelScope.launch {
+            val status = previewResult { repo.status(v.serial) }
+            val last = previewResult { repo.lastReport(v.serial) }
+            _ui.update { if (it.selectedId == v.deviceId) it.copy(preview = PreviewInfo(v.deviceId, status, last)) else it }
+        }
+    }
+
+    private suspend fun <T> previewResult(block: suspend () -> T): Loadable<T> = try {
+        Loadable.Ready(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Loadable.Failed(e.message ?: "Błąd")
+    }
 
     fun refresh() {
         if (refreshJob?.isActive == true) return
@@ -104,6 +139,7 @@ class FleetViewModel : ViewModel() {
             val list = repo.vehicles()
             _ui.update { it.copy(vehicles = list, loading = false, error = null, lastRefresh = now()) }
             _ui.value.followed?.let { mapState.follow(it) }
+            if (_ui.value.selected != null) loadPreview(keepOld = true)
         } catch (e: CancellationException) {
             _ui.update { it.copy(loading = false) }
             throw e
@@ -116,8 +152,10 @@ class FleetViewModel : ViewModel() {
     }
 
     /** Wybór innego pojazdu (lub zamknięcie kafelka) kończy śledzenie. */
-    fun select(v: Vehicle?) = _ui.update {
-        it.copy(selectedId = v?.deviceId, followId = it.followId.takeIf { id -> id == v?.deviceId })
+    fun select(v: Vehicle?) {
+        val changed = _ui.value.selectedId != v?.deviceId
+        _ui.update { it.copy(selectedId = v?.deviceId, followId = it.followId.takeIf { id -> id == v?.deviceId }) }
+        if (changed) loadPreview()
     }
     fun setQuery(q: String) = _ui.update { it.copy(query = q) }
     fun setFilter(s: VehicleState?) = _ui.update { it.copy(stateFilter = if (it.stateFilter == s) null else s) }
@@ -130,7 +168,9 @@ class FleetViewModel : ViewModel() {
             if (v.state == VehicleState.DRIVING && !_ui.value.showDriving) toggleDriving()
             if (v.state != VehicleState.DRIVING && !_ui.value.showParked) toggleParked()
         }
+        val changed = _ui.value.selectedId != deviceId
         _ui.update { it.copy(tab = MainTab.MAP, selectedId = deviceId) }
+        if (changed) loadPreview()
         _ui.value.selected?.let { mapState.focusOn(it, 16.0) }
     }
 

@@ -88,6 +88,10 @@ data class Vehicle(
     val ignition: Ignition,
     val lastPositionTime: Instant?,
     val mileage: Long?,
+    /** Obroty silnika [obr/min] – API jeszcze ich nie udostępnia. */
+    val rpm: Int? = null,
+    /** Poziom paliwa [%] – API jeszcze go nie udostępnia. */
+    val fuelPercent: Int? = null,
 ) {
     val hasPosition: Boolean get() = latitude != null && longitude != null
 

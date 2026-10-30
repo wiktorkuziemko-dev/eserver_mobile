@@ -58,3 +58,12 @@ actual fun StatusBarIcons(white: Boolean) {
         onDispose { if (previous != null) controller?.isAppearanceLightStatusBars = previous }
     }
 }
+
+@Composable
+actual fun KeepScreenOn(enabled: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(view, enabled) {
+        view.keepScreenOn = enabled
+        onDispose { view.keepScreenOn = false }
+    }
+}

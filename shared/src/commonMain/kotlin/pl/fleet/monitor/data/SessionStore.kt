@@ -45,6 +45,11 @@ class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
         get() = prefs.getBoolean(KEY_CLUSTER, true)
         set(value) = prefs.putBoolean(KEY_CLUSTER, value)
 
+    /** Ekran nie wygasza się, gdy widoczna jest mapa. */
+    var keepScreenOn: Boolean
+        get() = prefs.getBoolean(KEY_KEEP_SCREEN_ON, true)
+        set(value) = prefs.putBoolean(KEY_KEEP_SCREEN_ON, value)
+
     /** Mnożnik wielkości ikon i opisów pojazdów na mapie (0,7–1,5). */
     var markerScale: Float
         get() = prefs.getFloat(KEY_MARKER_SCALE, 1f).coerceIn(MIN_MARKER_SCALE, MAX_MARKER_SCALE)
@@ -119,6 +124,7 @@ class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
         const val KEY_SHOW_PARKED = "show_parked"
         const val KEY_CLUSTER = "cluster_markers"
         const val KEY_MARKER_SCALE = "marker_scale"
+        const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         const val MIN_MARKER_SCALE = 0.7f
         const val MAX_MARKER_SCALE = 1.5f
         // Wersja 2: tekst zamiast zbiorów SharedPreferences (Android migruje stare wartości przy starcie).

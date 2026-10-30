@@ -48,3 +48,11 @@ private fun topViewController(): UIViewController? {
 actual fun StatusBarIcons(white: Boolean) {
     // iOS: kolor paska stanu ustawia kontroler widoku (MainViewController) – na razie domyślny.
 }
+
+@Composable
+actual fun KeepScreenOn(enabled: Boolean) {
+    androidx.compose.runtime.DisposableEffect(enabled) {
+        platform.UIKit.UIApplication.sharedApplication.idleTimerDisabled = enabled
+        onDispose { platform.UIKit.UIApplication.sharedApplication.idleTimerDisabled = false }
+    }
+}

@@ -24,5 +24,9 @@ expect fun rememberPlatformActions(): PlatformActions
 @Composable
 expect fun StatusBarIcons(white: Boolean)
 
+/** Dopóki [enabled] jest w kompozycji, ekran nie wygasza się z powodu bezczynności. */
+@Composable
+expect fun KeepScreenOn(enabled: Boolean)
+
 internal fun googleMapsWebUrl(latitude: Double, longitude: Double) =
     "https://www.google.com/maps/search/?api=1&query=$latitude,$longitude"

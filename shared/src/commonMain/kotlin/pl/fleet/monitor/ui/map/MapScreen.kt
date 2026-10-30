@@ -75,6 +75,8 @@ import pl.fleet.monitor.ui.shortLabel
 @Composable
 fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> Unit, modifier: Modifier = Modifier) {
     val visible = ui.mapVehicles
+    // Mapa ma być stale widoczna (np. w trybie śledzenia) – bez wygaszania ekranu.
+    pl.fleet.monitor.platform.KeepScreenOn(ui.keepScreenOn)
 
     LaunchedEffect(ui.vehicles.isNotEmpty()) {
         // Pierwsze wyświetlenie: od razu nad pojazdami, bez animowanego przelotu (mniej pobieranych kafelków).

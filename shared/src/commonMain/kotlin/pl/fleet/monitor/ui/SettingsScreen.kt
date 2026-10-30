@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Workspaces
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
@@ -104,6 +105,20 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                     }
                     Spacer(Modifier.size(8.dp))
                     Switch(checked = fleet.clusterMarkers, onCheckedChange = vm::setClusterMarkers)
+                }
+
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.LightMode, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Nie wygaszaj ekranu na mapie", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Ekran pozostaje włączony, dopóki widoczna jest mapa. Zwiększa zużycie baterii.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.size(8.dp))
+                    Switch(checked = fleet.keepScreenOn, onCheckedChange = vm::setKeepScreenOn)
                 }
 
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))

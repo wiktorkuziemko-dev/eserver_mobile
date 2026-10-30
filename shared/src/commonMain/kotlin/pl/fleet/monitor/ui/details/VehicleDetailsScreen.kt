@@ -86,6 +86,7 @@ fun VehicleDetailsScreen(
     onBack: () -> Unit,
     onHistory: () -> Unit,
     onRefresh: () -> Unit,
+    onShowOnMap: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val platform = rememberPlatformActions()
@@ -132,7 +133,7 @@ fun VehicleDetailsScreen(
             }
 
             SectionTitle("Bieżąca aktywność")
-            CurrentActivityCard(ui.status, vehicle)
+            CurrentActivityCard(ui.status, vehicle, onShowOnMap)
 
             SectionTitle("Dane pojazdu")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -234,9 +235,13 @@ private fun DiagnosticsDialog(d: Loadable<String>, label: String, onClose: () ->
 }
 
 @Composable
-private fun CurrentActivityCard(status: Loadable<pl.fleet.monitor.data.MotionStatus>, vehicle: Vehicle) {
+private fun CurrentActivityCard(
+    status: Loadable<pl.fleet.monitor.data.MotionStatus>,
+    vehicle: Vehicle,
+    onShowOnMap: () -> Unit,
+) {
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             when (status) {
                 Loadable.Loading -> {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -276,6 +281,15 @@ private fun CurrentActivityCard(status: Loadable<pl.fleet.monitor.data.MotionSta
                     }
                 }
             }
+        }
+        OutlinedButton(
+            onClick = onShowOnMap,
+            enabled = vehicle.hasPosition,
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+        ) {
+            Icon(Icons.Outlined.Map, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Pokaż na mapie")
         }
     }
 }

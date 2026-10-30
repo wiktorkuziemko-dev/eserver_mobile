@@ -215,6 +215,12 @@ class FleetMapState {
         }
     }
 
+    /** Śledzenie: przesuwa mapę na nową pozycję pojazdu bez zmiany przybliżenia. */
+    fun follow(v: Vehicle) {
+        if (!v.hasPosition) return
+        scope.launch { map.scrollTo(lonToX(v.longitude!!), latToY(v.latitude!!), map.scale) }
+    }
+
     fun focusOn(v: Vehicle, zoom: Double = 15.0) {
         if (!v.hasPosition) return
         hasFitted = true

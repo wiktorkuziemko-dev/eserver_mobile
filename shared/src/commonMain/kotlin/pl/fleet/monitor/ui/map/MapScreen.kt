@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.CenterFocusStrong
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.GpsFixed
+import androidx.compose.material.icons.outlined.GpsNotFixed
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Schedule
@@ -154,6 +156,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                     }
                 }
             }
+            ui.followed?.let { FollowInfo(ui.mapLabel(it), onStop = vm::stopFollowing) }
             HiddenInfo(ui, onShowAll = vm::showAllTypes)
             ui.error?.let { err ->
                 Spacer(Modifier.size(8.dp))
@@ -167,7 +170,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SmallFloatingActionButton(onClick = { vm.mapState.fitAll(visible) }) {
+            SmallFloatingActionButton(onClick = { vm.stopFollowing(); vm.mapState.fitAll(visible) }) {
                 Icon(Icons.Outlined.CenterFocusStrong, "Pokaż wszystkie pojazdy")
             }
         }
@@ -179,8 +182,39 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             exit = slideOutVertically { it },
         ) {
             ui.selected?.let { v ->
-                VehiclePreviewCard(v, onClose = { vm.select(null) }, onDetails = { onOpenVehicle(v.deviceId) })
+                VehiclePreviewCard(
+                    v,
+                    following = ui.followId == v.deviceId,
+                    onFollow = { if (ui.followId == v.deviceId) vm.stopFollowing() else vm.follow(v.deviceId) },
+                    onClose = { vm.select(null) },
+                    onDetails = { onOpenVehicle(v.deviceId) },
+                )
             }
+        }
+    }
+}
+
+/** Informacja o trybie śledzenia – wyłączana tak jak filtry widoku. */
+@Composable
+private fun FollowInfo(label: String, onStop: () -> Unit) {
+    Spacer(Modifier.size(6.dp))
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = androidx.compose.ui.graphics.Color(0xFFE8F1FE),
+        border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFF9EC2F5)),
+        shadowElevation = 2.dp,
+    ) {
+        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.GpsFixed, null, Modifier.size(16.dp), tint = androidx.compose.ui.graphics.Color(0xFF1A5DBF))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Śledzenie: $label",
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            TextButton(onClick = onStop) { Text("Zakończ") }
         }
     }
 }
@@ -255,7 +289,13 @@ private fun Segment(
 }
 
 @Composable
-private fun VehiclePreviewCard(v: Vehicle, onClose: () -> Unit, onDetails: () -> Unit) {
+private fun VehiclePreviewCard(
+    v: Vehicle,
+    following: Boolean,
+    onFollow: () -> Unit,
+    onClose: () -> Unit,
+    onDetails: () -> Unit,
+) {
     Card(
         Modifier.fillMaxWidth().padding(12.dp).clickable(onClick = onDetails),
         elevation = CardDefaults.cardElevation(6.dp),
@@ -287,10 +327,25 @@ private fun VehiclePreviewCard(v: Vehicle, onClose: () -> Unit, onDetails: () ->
                 }
             }
             Spacer(Modifier.size(12.dp))
-            Button(onClick = onDetails, modifier = Modifier.fillMaxWidth()) {
-                Text("Szczegóły i historia")
-                Spacer(Modifier.width(8.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (following) {
+                    androidx.compose.material3.FilledTonalButton(onClick = onFollow, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Outlined.GpsFixed, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Śledzisz", maxLines = 1)
+                    }
+                } else {
+                    androidx.compose.material3.OutlinedButton(onClick = onFollow, enabled = v.hasPosition, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Outlined.GpsNotFixed, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Śledź", maxLines = 1)
+                    }
+                }
+                Button(onClick = onDetails, modifier = Modifier.weight(1.4f)) {
+                    Text("Szczegóły", maxLines = 1)
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
+                }
             }
         }
     }

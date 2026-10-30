@@ -36,11 +36,14 @@ data class FleetUiState(
     val customLabels: Map<String, String> = emptyMap(),
     val clusterMarkers: Boolean = true,
     val markerScale: Float = 1f,
+    /** Pojazd śledzony na mapie (mapa podąża za nim po każdym odświeżeniu). */
+    val followId: String? = null,
 ) {
     /** Opis pojazdu na mapie: własny z ustawień albo nazwa pojazdu. */
     fun mapLabel(v: Vehicle): String = customLabels[v.deviceId] ?: v.displayName.ifBlank { v.label }
 
     val selected: Vehicle? get() = vehicles.firstOrNull { it.deviceId == selectedId }
+    val followed: Vehicle? get() = vehicles.firstOrNull { it.deviceId == followId }
 
     val filtered: List<Vehicle>
         get() = vehicles.filter { v ->
@@ -58,7 +61,8 @@ data class FleetUiState(
 
     /** Pojazdy widoczne na mapie: przełącznik na liście + filtr jadące / zaparkowane. */
     val mapVehicles: List<Vehicle>
-        get() = onMap.filter { if (it.state == VehicleState.DRIVING) showDriving else showParked }
+        // Śledzony pojazd zostaje na mapie także po zmianie stanu (np. zaparkował przy wyłączonym filtrze).
+        get() = onMap.filter { it.deviceId == followId || if (it.state == VehicleState.DRIVING) showDriving else showParked }
 }
 
 /** Współdzielony stan floty – wykorzystywany przez mapę, listę i szczegóły pojazdu. */
@@ -99,6 +103,7 @@ class FleetViewModel : ViewModel() {
         try {
             val list = repo.vehicles()
             _ui.update { it.copy(vehicles = list, loading = false, error = null, lastRefresh = now()) }
+            _ui.value.followed?.let { mapState.follow(it) }
         } catch (e: CancellationException) {
             _ui.update { it.copy(loading = false) }
             throw e
@@ -110,7 +115,10 @@ class FleetViewModel : ViewModel() {
         }
     }
 
-    fun select(v: Vehicle?) = _ui.update { it.copy(selectedId = v?.deviceId) }
+    /** Wybór innego pojazdu (lub zamknięcie kafelka) kończy śledzenie. */
+    fun select(v: Vehicle?) = _ui.update {
+        it.copy(selectedId = v?.deviceId, followId = it.followId.takeIf { id -> id == v?.deviceId })
+    }
     fun setQuery(q: String) = _ui.update { it.copy(query = q) }
     fun setFilter(s: VehicleState?) = _ui.update { it.copy(stateFilter = if (it.stateFilter == s) null else s) }
     fun setTab(t: MainTab) = _ui.update { it.copy(tab = t) }
@@ -126,6 +134,14 @@ class FleetViewModel : ViewModel() {
         _ui.value.selected?.let { mapState.focusOn(it, 16.0) }
     }
 
+    /** Tryb śledzenia: mapa centruje się na pojeździe i podąża za nim przy każdym odświeżeniu. */
+    fun follow(deviceId: String) {
+        showOnMap(deviceId)
+        _ui.update { it.copy(followId = deviceId) }
+    }
+
+    fun stopFollowing() = _ui.update { it.copy(followId = null) }
+
     fun toggleDriving() = _ui.update { it.copy(showDriving = !it.showDriving).also { s -> session.showDriving = s.showDriving } }
     fun showAllTypes() = _ui.update {
         session.showDriving = true; session.showParked = true
@@ -136,7 +152,11 @@ class FleetViewModel : ViewModel() {
     fun setOnMap(deviceId: String, visible: Boolean) = _ui.update {
         val hidden = if (visible) it.hidden - deviceId else it.hidden + deviceId
         session.hiddenVehicles = hidden
-        it.copy(hidden = hidden, selectedId = if (!visible && it.selectedId == deviceId) null else it.selectedId)
+        it.copy(
+            hidden = hidden,
+            selectedId = if (!visible && it.selectedId == deviceId) null else it.selectedId,
+            followId = if (!visible && it.followId == deviceId) null else it.followId,
+        )
     }
 
     fun setAllOnMap(visible: Boolean) = _ui.update {

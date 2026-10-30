@@ -18,7 +18,7 @@ class FleetApp : Application() {
             AppContainer(
                 settings = SharedPreferencesSettings(prefs),
                 secureSettings = openSecure()?.let { SharedPreferencesSettings(it) },
-                appVersion = BuildConfig.VERSION_NAME,
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                 cacheDir = cacheDir.absolutePath,
             ),
         )

@@ -12,10 +12,11 @@ android {
         applicationId = "com.eserver_mini"
         minSdk = 26
         targetSdk = 36
-        // Każde wydanie z GitHuba ma kolejny numer (Google Play wymaga rosnącego versionCode).
-        // Przesunięcie (zmienna ANDROID_VERSION_CODE_OFFSET w GitHubie) musi zapewnić numer wyższy niż w poprzedniej wersji w sklepie.
-        val offset = System.getenv("ANDROID_VERSION_CODE_OFFSET")?.toIntOrNull() ?: 100
-        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.plus(offset) ?: 14
+        // Google Play wymaga rosnącego versionCode. W CI: liczba minut od 1.01.2025 (UTC) –
+        // zawsze rośnie i jest wyższa od dawnych numerów z GitHuba (numer przebiegu + przesunięcie).
+        versionCode = if (System.getenv("CI") != null) {
+            ((System.currentTimeMillis() / 1000 - 1_735_689_600L) / 60).toInt()
+        } else 14
         versionName = "2.2.0"
     }
 

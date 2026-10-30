@@ -21,7 +21,11 @@ fun MainViewController(): UIViewController {
             secureSettings = KeychainSettings(service = "pl.fleet.monitor").takeIf { keychain ->
                 runCatching { keychain.getStringOrNull("probe") }.isSuccess
             },
-            appVersion = NSBundle.mainBundle.infoDictionary?.get("CFBundleShortVersionString") as? String ?: "",
+            appVersion = NSBundle.mainBundle.infoDictionary.let { info ->
+                val name = info?.get("CFBundleShortVersionString") as? String ?: ""
+                val build = info?.get("CFBundleVersion") as? String
+                if (build != null) "$name ($build)" else name
+            },
             cacheDir = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).firstOrNull() as? String,
         ),
     )

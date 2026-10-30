@@ -22,3 +22,14 @@ actual fun platformHttpClient(): HttpClient = HttpClient(OkHttp) {
         }
     }
 }
+
+/** Klient do kafelków mapy: więcej równoczesnych pobrań z jednego serwera niż domyślne 5. */
+actual fun platformTileHttpClient(): HttpClient = HttpClient(OkHttp) {
+    engine {
+        config {
+            connectTimeout(15, TimeUnit.SECONDS)
+            readTimeout(20, TimeUnit.SECONDS)
+            dispatcher(okhttp3.Dispatcher().apply { maxRequestsPerHost = 8; maxRequests = 16 })
+        }
+    }
+}

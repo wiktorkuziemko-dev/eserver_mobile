@@ -40,6 +40,16 @@ class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
         get() = prefs.getBoolean(KEY_SHOW_PARKED, true)
         set(value) = prefs.putBoolean(KEY_SHOW_PARKED, value)
 
+    /** Grupowanie znaczników pojazdów znajdujących się blisko siebie. */
+    var clusterMarkers: Boolean
+        get() = prefs.getBoolean(KEY_CLUSTER, true)
+        set(value) = prefs.putBoolean(KEY_CLUSTER, value)
+
+    /** Mnożnik wielkości ikon i opisów pojazdów na mapie (0,7–1,5). */
+    var markerScale: Float
+        get() = prefs.getFloat(KEY_MARKER_SCALE, 1f).coerceIn(MIN_MARKER_SCALE, MAX_MARKER_SCALE)
+        set(value) = prefs.putFloat(KEY_MARKER_SCALE, value.coerceIn(MIN_MARKER_SCALE, MAX_MARKER_SCALE))
+
     /** Pojazdy wyłączone w ustawieniach (niewidoczne na liście i mapie). */
     var hiddenVehicles: Set<String>
         get() = readList(KEY_HIDDEN).toSet()
@@ -107,6 +117,10 @@ class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
         const val KEY_BASE_URL = "base_url"
         const val KEY_SHOW_DRIVING = "show_driving"
         const val KEY_SHOW_PARKED = "show_parked"
+        const val KEY_CLUSTER = "cluster_markers"
+        const val KEY_MARKER_SCALE = "marker_scale"
+        const val MIN_MARKER_SCALE = 0.7f
+        const val MAX_MARKER_SCALE = 1.5f
         // Wersja 2: tekst zamiast zbiorów SharedPreferences (Android migruje stare wartości przy starcie).
         const val KEY_HIDDEN = "hidden_vehicles_v2"
         const val KEY_ICONS = "vehicle_icons_v2"

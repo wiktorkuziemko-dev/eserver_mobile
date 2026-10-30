@@ -72,7 +72,21 @@ import ovh.plrapps.mapcompose.ui.MapUI
 import ovh.plrapps.mapcompose.ui.state.MapState
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.data.VehicleState
-import pl.fleet.monitor.data.platformHttpClient
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import ovh.plrapps.mapcompose.api.addClusterer
+import ovh.plrapps.mapcompose.api.maxScale
+import ovh.plrapps.mapcompose.api.removeClusterer
+import ovh.plrapps.mapcompose.api.setClustererExemptList
+import ovh.plrapps.mapcompose.api.snapScrollTo
+import ovh.plrapps.mapcompose.ui.state.markers.model.RenderingStrategy
+import pl.fleet.monitor.AppGraph
+import pl.fleet.monitor.data.platformTileHttpClient
 import pl.fleet.monitor.ui.VehicleIcon
 import pl.fleet.monitor.ui.color
 import kotlin.math.PI
@@ -98,15 +112,27 @@ private fun latToY(lat: Double): Double {
 /** Skala MapCompose odpowiadająca poziomowi przybliżenia OSM (18 = skala 1). */
 private fun zoomToScale(zoom: Double) = 2.0.pow(zoom - (LEVELS - 1))
 
-private val tileClient by lazy { platformHttpClient() }
+private val tileClient by lazy { platformTileHttpClient() }
 
-/** Kafelki pobierane z serwera OSM (wymagany identyfikujący User-Agent). */
+/** Pamięć podręczna kafelków na dysku – czyszczona przy pierwszym użyciu, jeśli za duża lub za stara. */
+private val tileCache: TileCache? by lazy {
+    AppGraph.takeIf { it.isInitialized }?.container?.cacheDir?.let { TileCache(it) }?.also { it.prune() }
+}
+
+/** Kafelki: najpierw z dysku, potem z serwera OSM (wymagany identyfikujący User-Agent). */
 private val osmTiles = TileStreamProvider { row, col, zoom ->
+    tileCache?.read(zoom, col, row)?.let { return@TileStreamProvider Buffer().apply { write(it) } }
     try {
         val r = tileClient.get("https://tile.openstreetmap.org/$zoom/$col/$row.png") {
             header(HttpHeaders.UserAgent, "E-SERVER-mini (pl.fleet.monitor)")
         }
-        if (r.status.isSuccess()) Buffer().apply { write(r.readRawBytes()) } else null
+        if (r.status.isSuccess()) {
+            val bytes = r.readRawBytes()
+            tileCache?.write(zoom, col, row, bytes)
+            Buffer().apply { write(bytes) }
+        } else {
+            null
+        }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -114,14 +140,28 @@ private val osmTiles = TileStreamProvider { row, col, zoom ->
     }
 }
 
+private const val CLUSTER_ID = "vehicles"
+
+/** Gęstość ekranu przyjmowana przed pierwszym pomiarem (typowy telefon). */
+private const val DEFAULT_DENSITY = 2.75f
+
 /** Dane znacznika – zmiana wartości odświeża tylko ten znacznik. */
 internal data class MarkerUi(val label: String, val state: VehicleState, val icon: VehicleIcon, val selected: Boolean)
 
 /** Stan mapy (pozycja i przybliżenie) – przeżywa przełączanie zakładek, bo trzyma go ViewModel. */
 class FleetMapState {
+    /**
+     * Gęstość ekranu. Kafelki 256 px wyświetlamy w punktach ekranu (dp), a nie w pikselach –
+     * jak wcześniej osmdroid – dzięki czemu pobieranych jest kilka razy mniej kafelków,
+     * a napisy na mapie są czytelne.
+     */
+    private var density = DEFAULT_DENSITY
+
     internal val map = MapState(LEVELS, FULL_SIZE, FULL_SIZE, TILE_SIZE) {
-        maxScale(2.0)
-        scale(zoomToScale(6.0))
+        maxScale(2.0 * DEFAULT_DENSITY)
+        // Kafelek z poziomu niższego powiększony 2–4 razy (zamiast wyższego poziomu pomniejszonego).
+        magnifyingFactor(2)
+        scale(zoomToScale(6.0) * DEFAULT_DENSITY)
         scroll(lonToX(19.48), latToY(52.07)) // domyślnie środek Polski
     }.apply {
         addLayer(osmTiles)
@@ -129,25 +169,48 @@ class FleetMapState {
     }
 
     internal val markerData = mutableStateMapOf<String, MarkerUi>()
+
+    /** Mnożnik wielkości ikon i opisów (suwak w ustawieniach). */
+    internal var markerScale by mutableFloatStateOf(1f)
+
+    /** Czy znaczniki są obecnie dodane z grupowaniem (null = jeszcze nie dodane). */
+    internal var clusteringApplied: Boolean? = null
+    internal var exempt: Set<String> = emptySet()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** Czy widok był już dopasowany do pojazdów (żeby nie nadpisywać przybliżenia ustawionego przez użytkownika). */
     var hasFitted = false
 
-    fun fitAll(vehicles: List<Vehicle>) {
+    private fun scaleFor(zoom: Double) = zoomToScale(zoom) * density
+
+    internal fun updateDensity(d: Float) {
+        if (d <= 0f || d == density) return
+        density = d
+        map.maxScale = 2.0 * d
+    }
+
+    /** Dopasowuje widok do pojazdów; [animate] = false przy pierwszym wyświetleniu (bez przelotu nad mapą). */
+    fun fitAll(vehicles: List<Vehicle>, animate: Boolean = true) {
         val points = vehicles.filter { it.hasPosition }.map { lonToX(it.longitude!!) to latToY(it.latitude!!) }
         if (points.isEmpty()) return
         hasFitted = true
         scope.launch {
             if (points.size == 1) {
-                map.scrollTo(points[0].first, points[0].second, zoomToScale(15.0))
+                val (x, y) = points[0]
+                if (animate) {
+                    map.scrollTo(x, y, scaleFor(15.0))
+                } else {
+                    map.scale = scaleFor(15.0)
+                    map.snapScrollTo(x, y)
+                }
             } else {
                 val box = BoundingBox(
                     xLeft = points.minOf { it.first }, yTop = points.minOf { it.second },
                     xRight = points.maxOf { it.first }, yBottom = points.maxOf { it.second },
                 )
-                map.scrollTo(box, padding = Offset(0.3f, 0.45f))
-                if (map.scale > zoomToScale(16.0)) map.scale = zoomToScale(16.0)
+                if (animate) map.scrollTo(box, padding = Offset(0.3f, 0.45f)) else map.snapScrollTo(box, padding = Offset(0.3f, 0.45f))
+                if (map.scale > scaleFor(16.0)) map.scale = scaleFor(16.0)
             }
         }
     }
@@ -155,7 +218,7 @@ class FleetMapState {
     fun focusOn(v: Vehicle, zoom: Double = 15.0) {
         if (!v.hasPosition) return
         hasFitted = true
-        scope.launch { map.scrollTo(lonToX(v.longitude!!), latToY(v.latitude!!), max(zoomToScale(zoom), map.scale)) }
+        scope.launch { map.scrollTo(lonToX(v.longitude!!), latToY(v.latitude!!), max(scaleFor(zoom), map.scale)) }
     }
 }
 
@@ -167,8 +230,15 @@ fun FleetMap(
     selectedId: String? = null,
     icons: Map<String, VehicleIcon> = emptyMap(),
     labels: Map<String, String> = emptyMap(),
+    clusterMarkers: Boolean = false,
+    markerScale: Float = 1f,
     onSelect: (Vehicle?) -> Unit = {},
 ) {
+    val density = LocalDensity.current.density
+    SideEffect {
+        state.updateDensity(density)
+        state.markerScale = markerScale
+    }
     val currentOnSelect by rememberUpdatedState(onSelect)
     val currentVehicles by rememberUpdatedState(vehicles)
 
@@ -178,7 +248,18 @@ fun FleetMap(
     }
 
     // Synchronizacja znaczników z listą pojazdów
-    LaunchedEffect(vehicles, selectedId, icons, labels) {
+    LaunchedEffect(vehicles, selectedId, icons, labels, clusterMarkers) {
+        // Zmiana trybu grupowania = przebudowa wszystkich znaczników
+        if (state.clusteringApplied != clusterMarkers) {
+            state.markerData.keys.toList().forEach { state.map.removeMarker(it) }
+            state.markerData.clear()
+            if (state.clusteringApplied == true) state.map.removeClusterer(CLUSTER_ID)
+            if (clusterMarkers) {
+                state.map.addClusterer(CLUSTER_ID, clusteringThreshold = 56.dp) { ids -> { ClusterMarker(ids, state) } }
+            }
+            state.exempt = emptySet()
+            state.clusteringApplied = clusterMarkers
+        }
         val wanted = vehicles.filter { it.hasPosition }
         val ids = wanted.map { it.deviceId }.toSet()
         (state.markerData.keys - ids).forEach { id ->
@@ -199,12 +280,24 @@ fun FleetMap(
                 state.map.moveMarker(v.deviceId, x, y)
             } else {
                 val id = v.deviceId
-                state.map.addMarker(id, x, y, relativeOffset = Offset(-0.5f, -0.5f)) {
-                    state.markerData[id]?.let { VehicleMarker(it) }
+                state.map.addMarker(
+                    id, x, y,
+                    relativeOffset = Offset(-0.5f, -0.5f),
+                    renderingStrategy = if (clusterMarkers) RenderingStrategy.Clustering(CLUSTER_ID) else RenderingStrategy.Default,
+                ) {
+                    state.markerData[id]?.let { VehicleMarker(it, state.markerScale) }
                 }
             }
             state.markerData[v.deviceId] = ui
             state.map.updateMarkerZ(v.deviceId, if (selected) 2f else if (v.state == VehicleState.DRIVING) 1f else 0f)
+        }
+        // Zaznaczony pojazd nigdy nie trafia do grupy – zawsze jest widoczny.
+        if (clusterMarkers) {
+            val exempt = setOfNotNull(selectedId?.takeIf { it in ids })
+            if (exempt != state.exempt) {
+                state.map.setClustererExemptList(CLUSTER_ID, exempt)
+                state.exempt = exempt
+            }
         }
     }
 
@@ -234,22 +327,25 @@ private val GLYPH = 34.dp
  * etykiecie, dzięki czemu znacznik jest symetryczny w pionie.
  */
 @Composable
-private fun VehicleMarker(m: MarkerUi) {
+private fun VehicleMarker(m: MarkerUi, scale: Float = 1f) {
+    val glyph = GLYPH * scale
+    val labelHeight = LABEL_HEIGHT * scale
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(LABEL_HEIGHT + 1.dp))
-        Box(Modifier.size(GLYPH + 6.dp), contentAlignment = Alignment.Center) {
-            if (m.state == VehicleState.DRIVING) Pulse(m.state.color)
-            Glyph(m.icon, m.state.color, m.selected, Modifier.size(if (m.selected) GLYPH + 6.dp else GLYPH))
+        Spacer(Modifier.height(labelHeight + 1.dp))
+        Box(Modifier.size(glyph + 6.dp * scale), contentAlignment = Alignment.Center) {
+            if (m.state == VehicleState.DRIVING) Pulse(m.state.color, glyph, scale)
+            Glyph(m.icon, m.state.color, m.selected, Modifier.size(if (m.selected) glyph + 6.dp * scale else glyph))
         }
         Spacer(Modifier.height(1.dp))
         Text(
             m.label,
-            Modifier.height(LABEL_HEIGHT)
-                .shadow(2.dp, RoundedCornerShape(6.dp))
-                .background(if (m.selected) SELECTED else Color.White, RoundedCornerShape(6.dp))
-                .padding(horizontal = 7.dp, vertical = 2.dp),
+            Modifier.height(labelHeight)
+                .shadow(2.dp, RoundedCornerShape(6.dp * scale))
+                .background(if (m.selected) SELECTED else Color.White, RoundedCornerShape(6.dp * scale))
+                .padding(horizontal = 7.dp * scale, vertical = 2.dp * scale),
             color = if (m.selected) Color.White else Color(0xFF212121),
-            fontSize = 11.sp,
+            fontSize = (11 * scale).sp,
+            lineHeight = (13 * scale).sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -257,23 +353,65 @@ private fun VehicleMarker(m: MarkerUi) {
     }
 }
 
-/** Dwie fale rozchodzące się od ikony jadącego pojazdu. */
+/** Dwie fale rozchodzące się od ikony jadącego pojazdu (lub grupy z jadącym pojazdem). */
 @Composable
-private fun Pulse(color: Color) {
+private fun Pulse(color: Color, size: Dp, scale: Float) {
     val transition = rememberInfiniteTransition()
     val t by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart))
     Box(
-        Modifier.size(GLYPH).drawBehind {
-            val start = size.minDimension / 2f
+        Modifier.size(size).drawBehind {
+            val start = this.size.minDimension / 2f
             for (offset in floatArrayOf(0f, 0.5f)) {
                 val p = (t + offset) % 1f
                 val eased = 1f - (1f - p) * (1f - p)
-                val r = start + 22.dp.toPx() * eased
+                val r = start + 22.dp.toPx() * scale * eased
                 drawCircle(color.copy(alpha = (1f - p) * 0.28f), radius = r)
-                drawCircle(color.copy(alpha = (1f - p) * 0.8f), radius = r, style = Stroke(2.5.dp.toPx()))
+                drawCircle(color.copy(alpha = (1f - p) * 0.8f), radius = r, style = Stroke(2.5.dp.toPx() * scale))
             }
         },
     )
+}
+
+/**
+ * Grupa pojazdów: biała plakietka z liczbą, otoczona pierścieniem podzielonym proporcjonalnie
+ * na jadące (zielony) i zaparkowane (pomarańczowy). Pulsuje, gdy w grupie jest jadący pojazd.
+ * Dotknięcie grupy przybliża mapę (domyślne zachowanie biblioteki).
+ */
+@Composable
+private fun ClusterMarker(ids: List<String>, state: FleetMapState) {
+    val scale = state.markerScale
+    val items = ids.mapNotNull { state.markerData[it] }
+    val driving = items.count { it.state == VehicleState.DRIVING }
+    val total = ids.size
+    val size = (if (total >= 100) 52.dp else if (total >= 10) 46.dp else 42.dp) * scale
+    Box(Modifier.size(size + 8.dp * scale), contentAlignment = Alignment.Center) {
+        if (driving > 0) Pulse(VehicleState.DRIVING.color, size, scale)
+        Canvas(Modifier.size(size).shadow(4.dp * scale, CircleShape)) {
+            val ring = 5.dp.toPx() * scale
+            drawCircle(Color.White)
+            val arcSize = Size(this.size.width - ring, this.size.height - ring)
+            val topLeft = Offset(ring / 2f, ring / 2f)
+            val drivingSweep = if (items.isEmpty()) 0f else 360f * driving / items.size
+            if (drivingSweep < 360f) {
+                drawArc(VehicleState.PARKED.color, -90f + drivingSweep, 360f - drivingSweep, false, topLeft, arcSize, style = Stroke(ring))
+            }
+            if (drivingSweep > 0f) {
+                drawArc(VehicleState.DRIVING.color, -90f, drivingSweep, false, topLeft, arcSize, style = Stroke(ring))
+            }
+        }
+        Text(
+            total.toString(),
+            color = Color(0xFF212121),
+            fontSize = (15 * scale).sp,
+            fontWeight = FontWeight.Black,
+        )
+    }
+}
+
+/** Przykładowy znacznik do podglądu wielkości w ustawieniach. */
+@Composable
+fun MarkerPreview(scale: Float, label: String = "Ford Focus") {
+    VehicleMarker(MarkerUi(label, VehicleState.DRIVING, VehicleIcon.DEFAULT, selected = false), scale)
 }
 
 /** Wektor ikony zamieniony na ścieżki (do własnego rysowania z obrysem i gradientem). */

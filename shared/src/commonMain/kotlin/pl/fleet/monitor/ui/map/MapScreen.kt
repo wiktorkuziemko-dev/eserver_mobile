@@ -73,7 +73,8 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
     val visible = ui.mapVehicles
 
     LaunchedEffect(ui.vehicles.isNotEmpty()) {
-        if (ui.vehicles.isNotEmpty() && !vm.mapState.hasFitted) vm.mapState.fitAll(visible.ifEmpty { ui.vehicles })
+        // Pierwsze wyświetlenie: od razu nad pojazdami, bez animowanego przelotu (mniej pobieranych kafelków).
+        if (ui.vehicles.isNotEmpty() && !vm.mapState.hasFitted) vm.mapState.fitAll(visible.ifEmpty { ui.vehicles }, animate = false)
     }
 
     Box(modifier.fillMaxSize()) {
@@ -84,17 +85,20 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             selectedId = ui.selectedId,
             icons = ui.icons,
             labels = ui.customLabels,
+            clusterMarkers = ui.clusterMarkers,
+            markerScale = ui.markerScale,
             onSelect = vm::select,
         )
 
         // Kapsuła segmentowa „Twoje pojazdy” + pigułka odświeżania – jeden rząd 44 dp
         Column(Modifier.align(Alignment.TopStart).padding(12.dp).fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Pigułka z godziną ma pierwszeństwo – kapsuła dostaje resztę miejsca i w razie potrzeby skraca opisy.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 4.dp,
-                    modifier = Modifier.height(44.dp).semantics { contentDescription = "Twoje pojazdy – filtr mapy" },
+                    modifier = Modifier.weight(1f, fill = false).height(44.dp).semantics { contentDescription = "Twoje pojazdy – filtr mapy" },
                 ) {
                     Row(Modifier.height(IntrinsicSize.Max)) {
                         Segment(
@@ -106,6 +110,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                             checked = ui.showDriving,
                             onClick = vm::toggleDriving,
                             startPadding = 14.dp, endPadding = 12.dp,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                         VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Segment(
@@ -117,11 +122,10 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                             checked = ui.showParked,
                             onClick = vm::toggleParked,
                             startPadding = 12.dp, endPadding = 14.dp,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
                 }
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
                 val refreshDescription = "Odśwież dane. Ostatnia aktualizacja: " + (ui.lastRefresh?.let { Fmt.stamp(it) } ?: "brak")
                 Surface(
                     onClick = { vm.refresh() },
@@ -129,7 +133,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 4.dp,
-                    modifier = Modifier.height(44.dp).semantics { contentDescription = refreshDescription },
+                    modifier = Modifier.padding(start = 8.dp).height(44.dp).semantics { contentDescription = refreshDescription },
                 ) {
                     Row(Modifier.padding(start = 10.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
@@ -144,6 +148,8 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                             ui.lastRefresh?.let { Fmt.shortStamp(it) } ?: "…",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                     }
                 }
@@ -222,10 +228,11 @@ private fun Segment(
     onClick: () -> Unit,
     startPadding: androidx.compose.ui.unit.Dp,
     endPadding: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
 ) {
     val fg = if (checked) textColor else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
-        Modifier
+        modifier
             .fillMaxHeight()
             .background(if (checked) tint else MaterialTheme.colorScheme.surface)
             .toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = { onClick() })
@@ -239,9 +246,11 @@ private fun Segment(
         }
         Spacer(Modifier.width(7.dp))
         val decoration = if (checked) null else androidx.compose.ui.text.style.TextDecoration.LineThrough
-        Text(count.toString(), color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, textDecoration = decoration)
+        Text(count.toString(), color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
+            textDecoration = decoration, maxLines = 1, softWrap = false)
         Spacer(Modifier.width(4.dp))
-        Text(label, color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Normal, textDecoration = decoration)
+        Text(label, Modifier.weight(1f, fill = false), color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Normal,
+            textDecoration = decoration, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 

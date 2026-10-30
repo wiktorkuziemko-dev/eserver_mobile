@@ -10,3 +10,13 @@ actual fun platformHttpClient(): HttpClient = HttpClient(Darwin) {
         }
     }
 }
+
+/** Klient do kafelków mapy: więcej równoczesnych pobrań z jednego serwera. */
+actual fun platformTileHttpClient(): HttpClient = HttpClient(Darwin) {
+    engine {
+        configureSession {
+            setHTTPMaximumConnectionsPerHost(8)
+            setTimeoutIntervalForRequest(20.0)
+        }
+    }
+}

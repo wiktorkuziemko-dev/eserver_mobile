@@ -5,6 +5,9 @@ import com.russhwolf.settings.ExperimentalSettingsImplementation
 import com.russhwolf.settings.KeychainSettings
 import com.russhwolf.settings.NSUserDefaultsSettings
 import platform.Foundation.NSBundle
+import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUserDomainMask
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIViewController
 
@@ -19,6 +22,7 @@ fun MainViewController(): UIViewController {
                 runCatching { keychain.getStringOrNull("probe") }.isSuccess
             },
             appVersion = NSBundle.mainBundle.infoDictionary?.get("CFBundleShortVersionString") as? String ?: "",
+            cacheDir = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).firstOrNull() as? String,
         ),
     )
     return ComposeUIViewController { App() }

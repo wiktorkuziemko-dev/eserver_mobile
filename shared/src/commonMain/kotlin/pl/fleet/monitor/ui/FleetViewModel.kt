@@ -34,6 +34,8 @@ data class FleetUiState(
     val hidden: Set<String> = emptySet(),
     val icons: Map<String, VehicleIcon> = emptyMap(),
     val customLabels: Map<String, String> = emptyMap(),
+    val clusterMarkers: Boolean = true,
+    val markerScale: Float = 1f,
 ) {
     /** Opis pojazdu na mapie: własny z ustawień albo nazwa pojazdu. */
     fun mapLabel(v: Vehicle): String = customLabels[v.deviceId] ?: v.displayName.ifBlank { v.label }
@@ -149,7 +151,19 @@ class FleetViewModel : ViewModel() {
         hidden = session.hiddenVehicles,
         icons = session.vehicleIcons.mapValues { VehicleIcon.fromKey(it.value) },
         customLabels = session.vehicleLabels,
+        clusterMarkers = session.clusterMarkers,
+        markerScale = session.markerScale,
     )
+
+    fun setClusterMarkers(enabled: Boolean) = _ui.update {
+        session.clusterMarkers = enabled
+        it.copy(clusterMarkers = enabled)
+    }
+
+    fun setMarkerScale(scale: Float) = _ui.update {
+        session.markerScale = scale
+        it.copy(markerScale = session.markerScale)
+    }
 
     /** Ikona i własny opis pojazdu (pusty opis = nazwa pojazdu). */
     fun setAppearance(deviceId: String, icon: VehicleIcon, label: String) {

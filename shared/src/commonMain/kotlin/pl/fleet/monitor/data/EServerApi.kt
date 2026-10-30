@@ -28,6 +28,9 @@ import kotlin.time.Instant
  */
 expect fun platformHttpClient(): HttpClient
 
+/** Klient HTTP do pobierania kafelków mapy (więcej równoczesnych połączeń, krótsze limity czasu). */
+expect fun platformTileHttpClient(): HttpClient
+
 /** Dane logowania – hasło przechowujemy wyłącznie jako skrót MD5, tak jak wymaga API. */
 data class Credentials(val login: String, val passwordMd5: String) {
     val authorizationHeader: String

@@ -16,7 +16,7 @@ android {
         // Przesunięcie (zmienna ANDROID_VERSION_CODE_OFFSET w GitHubie) musi zapewnić numer wyższy niż w poprzedniej wersji w sklepie.
         val offset = System.getenv("ANDROID_VERSION_CODE_OFFSET")?.toIntOrNull() ?: 100
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.plus(offset) ?: 14
-        versionName = "2.1.0"
+        versionName = "2.2.0"
     }
 
     // Klucz przesyłania do Google Play – z sekretów GitHuba (ścieżka do pliku i hasła w zmiennych środowiskowych).

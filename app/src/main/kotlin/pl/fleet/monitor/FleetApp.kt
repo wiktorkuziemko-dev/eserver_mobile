@@ -19,6 +19,7 @@ class FleetApp : Application() {
                 settings = SharedPreferencesSettings(prefs),
                 secureSettings = openSecure()?.let { SharedPreferencesSettings(it) },
                 appVersion = BuildConfig.VERSION_NAME,
+                cacheDir = cacheDir.absolutePath,
             ),
         )
     }

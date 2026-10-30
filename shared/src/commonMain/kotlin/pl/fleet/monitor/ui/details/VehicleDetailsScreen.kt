@@ -116,7 +116,7 @@ fun VehicleDetailsScreen(
                     modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)),
                 )
                 androidx.compose.runtime.LaunchedEffect(vehicle.latitude, vehicle.longitude) {
-                    mapState.fitAll(listOf(vehicle))
+                    mapState.fitAll(listOf(vehicle), animate = false)
                 }
             }
 

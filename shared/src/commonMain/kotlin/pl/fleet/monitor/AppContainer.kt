@@ -13,6 +13,8 @@ class AppContainer(
     settings: Settings,
     secureSettings: Settings?,
     val appVersion: String,
+    /** Katalog pamięci podręcznej systemu (kafelki mapy); null = bez zapisu na dysk. */
+    val cacheDir: String? = null,
 ) {
     val session = SessionStore(settings, secureSettings)
 

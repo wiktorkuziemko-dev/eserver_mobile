@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Snowmobile
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
@@ -22,6 +23,8 @@ import androidx.compose.ui.unit.dp
 enum class VehicleIcon(val label: String) {
     CAR("Auto osobowe"),
     VAN("Dostawcze"),
+    CAMPER("Kamper"),
+    MOTORCYCLE("Motocykl"),
     TRUCK("TIR"),
     GARBAGE("Śmieciarka"),
     EXCAVATOR("Koparka"),
@@ -35,6 +38,8 @@ enum class VehicleIcon(val label: String) {
         get() = when (this) {
             CAR -> Icons.Filled.DirectionsCar
             VAN -> Icons.Filled.AirportShuttle
+            CAMPER -> Camper
+            MOTORCYCLE -> Icons.Filled.TwoWheeler
             TRUCK -> Icons.Filled.LocalShipping
             GARBAGE -> GarbageTruck
             EXCAVATOR -> Excavator
@@ -59,6 +64,18 @@ private fun customIcon(name: String, pathData: String, evenOdd: Boolean = false)
             fill = SolidColor(Color.Black),
         )
         .build()
+
+/** Kamper: zabudowa z oknami, alkowa nad kabiną, kabina ze skośną szybą, koła. */
+private val Camper: ImageVector by lazy {
+    customIcon(
+        "Camper",
+        "M2,5h15v12H2z M4,7h4v3H4z M10,7h5v3h-5z" +
+            " M17,5h3a1,1 0 0 1 1,1v3h-4z" +
+            " M17,10h2.6l2.4,3v4h-5z M18,11h1.2l1.6,2H18z" +
+            " M6,19m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0 M18,19m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0",
+        evenOdd = true,
+    )
+}
 
 /** Śmieciarka: zabudowa z przetłoczeniami, kabina z szybą, koła. */
 private val GarbageTruck: ImageVector by lazy {

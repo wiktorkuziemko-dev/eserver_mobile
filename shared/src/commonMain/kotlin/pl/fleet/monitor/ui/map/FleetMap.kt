@@ -234,6 +234,7 @@ fun FleetMap(
     modifier: Modifier = Modifier,
     state: FleetMapState = remember { FleetMapState() },
     selectedId: String? = null,
+    followId: String? = null,
     icons: Map<String, VehicleIcon> = emptyMap(),
     labels: Map<String, String> = emptyMap(),
     clusterMarkers: Boolean = false,
@@ -254,7 +255,7 @@ fun FleetMap(
     }
 
     // Synchronizacja znaczników z listą pojazdów
-    LaunchedEffect(vehicles, selectedId, icons, labels, clusterMarkers) {
+    LaunchedEffect(vehicles, selectedId, followId, icons, labels, clusterMarkers) {
         // Zmiana trybu grupowania = przebudowa wszystkich znaczników
         if (state.clusteringApplied != clusterMarkers) {
             state.markerData.keys.toList().forEach { state.map.removeMarker(it) }
@@ -299,7 +300,8 @@ fun FleetMap(
         }
         // Zaznaczony pojazd nigdy nie trafia do grupy – zawsze jest widoczny.
         if (clusterMarkers) {
-            val exempt = setOfNotNull(selectedId?.takeIf { it in ids })
+            // Zaznaczony i śledzony pojazd nigdy nie trafia do grupy.
+            val exempt = setOfNotNull(selectedId, followId).filterTo(mutableSetOf()) { it in ids }
             if (exempt != state.exempt) {
                 state.map.setClustererExemptList(CLUSTER_ID, exempt)
                 state.exempt = exempt

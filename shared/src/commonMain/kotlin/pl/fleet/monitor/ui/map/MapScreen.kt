@@ -89,6 +89,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             modifier = Modifier.fillMaxSize(),
             state = vm.mapState,
             selectedId = ui.selectedId,
+            followId = ui.followId,
             icons = ui.icons,
             labels = ui.customLabels,
             clusterMarkers = ui.clusterMarkers,
@@ -174,7 +175,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SmallFloatingActionButton(onClick = { vm.stopFollowing(); vm.mapState.fitAll(visible) }) {
+            SmallFloatingActionButton(onClick = { vm.mapState.fitAll(visible) }) {
                 Icon(Icons.Outlined.CenterFocusStrong, "Pokaż wszystkie pojazdy")
             }
         }
@@ -190,7 +191,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                     v,
                     following = ui.followId == v.deviceId,
                     preview = ui.preview?.takeIf { it.deviceId == v.deviceId },
-                    onFollow = { if (ui.followId == v.deviceId) vm.stopFollowing() else vm.follow(v.deviceId) },
+                    onFollow = { vm.follow(v.deviceId) },
                     onClose = { vm.select(null) },
                     onDetails = { onOpenVehicle(v.deviceId) },
                 )
@@ -302,9 +303,12 @@ private fun VehiclePreviewCard(
     onClose: () -> Unit,
     onDetails: () -> Unit,
 ) {
+    // Tryb śledzenia: delikatna niebieska ramka i jasnoniebieskie tło kafelka.
     Card(
         Modifier.fillMaxWidth().padding(12.dp).clickable(onClick = onDetails),
         elevation = CardDefaults.cardElevation(6.dp),
+        border = if (following) BorderStroke(2.dp, FOLLOW_BORDER) else null,
+        colors = if (following) CardDefaults.cardColors(containerColor = FOLLOW_TINT) else CardDefaults.cardColors(),
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -318,8 +322,10 @@ private fun VehiclePreviewCard(
                 StateBadge(v.state, text = v.state.label)
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Zamknij") }
             }
-            Spacer(Modifier.size(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
+            val driving = status?.motion ?: (v.state == VehicleState.DRIVING)
+            // Na postoju zegary pokazywałyby same zera – pomijamy je.
+            if (driving) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ArcGauge(v.speed.toFloat(), SPEED_MAX, v.speed.toString(), "km/h", VehicleState.DRIVING.color, Modifier.weight(1f))
                 ArcGauge(
                     v.rpm?.toFloat(), RPM_MAX, v.rpm?.let { Fmt.decimal(it / 1000.0, 1) }, "obr. ×1000",
@@ -331,11 +337,19 @@ private fun VehiclePreviewCard(
                 )
             }
             Spacer(Modifier.size(10.dp))
-            StatusField(v, preview)
+            StatusField(v, preview, driving)
             Spacer(Modifier.size(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (following) {
-                    androidx.compose.material3.FilledTonalButton(onClick = onFollow, modifier = Modifier.weight(1f)) {
+                    // „Śledzisz” ponownie centruje mapę; śledzenie kończy tylko „Zakończ” w komunikacie u góry.
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = onFollow,
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                            containerColor = androidx.compose.ui.graphics.Color(0xFFDCE8FB),
+                            contentColor = androidx.compose.ui.graphics.Color(0xFF1A3E78),
+                        ),
+                    ) {
                         Icon(Icons.Outlined.GpsFixed, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Śledzisz", maxLines = 1)
@@ -356,6 +370,9 @@ private fun VehiclePreviewCard(
         }
     }
 }
+
+private val FOLLOW_BORDER = androidx.compose.ui.graphics.Color(0xFF9EC2F5)
+private val FOLLOW_TINT = androidx.compose.ui.graphics.Color(0xFFF5F9FF)
 
 private const val SPEED_MAX = 160f
 private const val RPM_MAX = 6000f
@@ -390,21 +407,19 @@ private fun ArcGauge(value: Float?, max: Float, text: String?, unit: String, col
 
 /** Pole stanu pod zegarami: „W ruchu od 2 h 41 min” / „Postój od 33 min” + czas ostatniego raportu. */
 @Composable
-private fun StatusField(v: Vehicle, preview: pl.fleet.monitor.ui.PreviewInfo?) {
+private fun StatusField(v: Vehicle, preview: pl.fleet.monitor.ui.PreviewInfo?, driving: Boolean) {
     val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
-    val driving = status?.motion ?: (v.state == VehicleState.DRIVING)
     val stateColor = if (driving) VehicleState.DRIVING.color else VehicleState.PARKED.color
     val bg = if (driving) androidx.compose.ui.graphics.Color(0xFFF1F8F2) else androidx.compose.ui.graphics.Color(0xFFFFF6EA)
-    val title = when {
-        status?.begin != null -> (if (driving) "W ruchu od " else "Postój od ") + Fmt.duration((pl.fleet.monitor.data.now() - status.begin).inWholeSeconds)
-        preview?.status is pl.fleet.monitor.ui.details.Loadable.Loading -> if (driving) "W ruchu" else "Postój"
-        else -> (if (driving) "W ruchu" else "Postój") + " (według ostatniej pozycji)"
-    }
+    // Początek jazdy/postoju z API; bez niego na postoju – czas ostatniej pozycji (od kiedy pojazd stoi).
+    val begin = status?.begin ?: v.lastPositionTime.takeIf { !driving }
+    val title = (if (driving) "W ruchu" else "Postój") +
+        (begin?.let { " od " + Fmt.duration((pl.fleet.monitor.data.now() - it).inWholeSeconds) } ?: "")
     val report = when (val r = preview?.lastReport) {
         is pl.fleet.monitor.ui.details.Loadable.Ready -> r.value
         else -> null
     } ?: v.lastPositionTime
-    val since = status?.begin?.let { "od ${Fmt.smartTime(it)} · " }.orEmpty()
+    val since = begin?.let { "od ${Fmt.dateTime(it)} · " }.orEmpty()
     Column(
         Modifier.fillMaxWidth()
             .background(bg, RoundedCornerShape(12.dp))

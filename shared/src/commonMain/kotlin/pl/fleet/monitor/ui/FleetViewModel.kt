@@ -152,10 +152,10 @@ class FleetViewModel : ViewModel() {
         }
     }
 
-    /** Wybór innego pojazdu (lub zamknięcie kafelka) kończy śledzenie. */
+    /** Śledzenie trwa także po zamknięciu kafelka – kończy je tylko „Zakończ” w komunikacie u góry. */
     fun select(v: Vehicle?) {
         val changed = _ui.value.selectedId != v?.deviceId
-        _ui.update { it.copy(selectedId = v?.deviceId, followId = it.followId.takeIf { id -> id == v?.deviceId }) }
+        _ui.update { it.copy(selectedId = v?.deviceId) }
         if (changed) loadPreview()
     }
     fun setQuery(q: String) = _ui.update { it.copy(query = q) }

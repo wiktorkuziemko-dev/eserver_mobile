@@ -52,6 +52,23 @@ jobs:
         with:
           name: fleet-monitor-aab-google-play
           path: app/build/outputs/bundle/release/*.aab
+      # Pliki z gałęzi main także w zakładce Releases (łatwiej je znaleźć i pobrać niż artefakty).
+      - name: Wydanie w zakładce Releases
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
+          TAG="build-$GITHUB_RUN_NUMBER"
+          mkdir -p release
+          cp app/build/outputs/apk/release/*.apk "release/eserver-mini-$VERSION-$GITHUB_RUN_NUMBER.apk"
+          ls app/build/outputs/bundle/release/*.aab >/dev/null 2>&1 && \
+            cp app/build/outputs/bundle/release/*.aab "release/eserver-mini-$VERSION-$GITHUB_RUN_NUMBER-google-play.aab"
+          NOTES="Wersja $VERSION, budowanie $GITHUB_RUN_NUMBER ($GITHUB_SHA).
+          APK – instalacja bezpośrednio na telefonie. AAB – do wgrania w Google Play Console."
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --prerelease --target "$GITHUB_SHA" --title "E-SERVER mini $VERSION ($GITHUB_RUN_NUMBER)" --notes "$NOTES"
+          gh release upload "$TAG" release/* --clobber
 
   ios:
     runs-on: macos-latest

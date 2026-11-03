@@ -95,6 +95,14 @@ data class Vehicle(
 ) {
     val hasPosition: Boolean get() = latitude != null && longitude != null
 
+    /** Pozycja nadająca się do dopasowania mapy: w zakresie odwzorowania i różna od 0,0 (brak sygnału GPS). */
+    val hasValidPosition: Boolean
+        get() {
+            val lat = latitude ?: return false
+            val lon = longitude ?: return false
+            return lat.isFinite() && lon.isFinite() && lat in -85.0..85.0 && lon in -180.0..180.0 && !(lat == 0.0 && lon == 0.0)
+        }
+
     val state: VehicleState
         // Tylko prędkość: część nadajników wybudza się z akcelerometru i zawsze raportuje zapłon wyłączony.
         get() = if (speed > 0) VehicleState.DRIVING else VehicleState.PARKED

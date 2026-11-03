@@ -140,6 +140,9 @@ private val osmTiles = TileStreamProvider { row, col, zoom ->
     }
 }
 
+/** Minimalny rozmiar obszaru dopasowania (ok. 800 m na równiku, we współrzędnych mapy 0–1). */
+private const val MIN_SPAN = 2e-5
+
 private const val CLUSTER_ID = "vehicles"
 
 /** Gęstość ekranu przyjmowana przed pierwszym pomiarem (typowy telefon). */
@@ -190,14 +193,23 @@ class FleetMapState {
         map.maxScale = 2.0 * d
     }
 
-    /** Dopasowuje widok do pojazdów; [animate] = false przy pierwszym wyświetleniu (bez przelotu nad mapą). */
+    /**
+     * Dopasowuje widok do pojazdów; [animate] = false przy pierwszym wyświetleniu (bez przelotu nad mapą).
+     * Pojazdy stojące w tym samym miejscu dają obszar o zerowej szerokości – wtedy przybliżenie
+     * wyliczone z obszaru byłoby nieskończone (mapa w punkcie 0,0 przy maksymalnym zbliżeniu),
+     * dlatego taki obszar traktujemy jak jeden punkt albo poszerzamy do minimalnego rozmiaru.
+     */
     fun fitAll(vehicles: List<Vehicle>, animate: Boolean = true) {
-        val points = vehicles.filter { it.hasPosition }.map { lonToX(it.longitude!!) to latToY(it.latitude!!) }
+        val points = vehicles.filter { it.hasValidPosition }.map { lonToX(it.longitude!!) to latToY(it.latitude!!) }
         if (points.isEmpty()) return
         hasFitted = true
+        val minX = points.minOf { it.first }; val maxX = points.maxOf { it.first }
+        val minY = points.minOf { it.second }; val maxY = points.maxOf { it.second }
         scope.launch {
-            if (points.size == 1) {
-                val (x, y) = points[0]
+            if (!map.scale.isFinite() || map.scale <= 0.0) map.scale = scaleFor(6.0)
+            if (maxX - minX < MIN_SPAN && maxY - minY < MIN_SPAN) {
+                val x = (minX + maxX) / 2
+                val y = (minY + maxY) / 2
                 if (animate) {
                     map.scrollTo(x, y, scaleFor(15.0))
                 } else {
@@ -205,24 +217,28 @@ class FleetMapState {
                     map.snapScrollTo(x, y)
                 }
             } else {
-                val box = BoundingBox(
-                    xLeft = points.minOf { it.first }, yTop = points.minOf { it.second },
-                    xRight = points.maxOf { it.first }, yBottom = points.maxOf { it.second },
-                )
+                val cx = (minX + maxX) / 2
+                val cy = (minY + maxY) / 2
+                val halfW = max(maxX - minX, MIN_SPAN) / 2
+                val halfH = max(maxY - minY, MIN_SPAN) / 2
+                val box = BoundingBox(xLeft = cx - halfW, yTop = cy - halfH, xRight = cx + halfW, yBottom = cy + halfH)
                 if (animate) map.scrollTo(box, padding = Offset(0.3f, 0.45f)) else map.snapScrollTo(box, padding = Offset(0.3f, 0.45f))
-                if (map.scale > scaleFor(16.0)) map.scale = scaleFor(16.0)
+                if (!map.scale.isFinite() || map.scale > scaleFor(16.0)) {
+                    map.scale = scaleFor(16.0)
+                    map.snapScrollTo(cx, cy)
+                }
             }
         }
     }
 
     /** Śledzenie: przesuwa mapę na nową pozycję pojazdu bez zmiany przybliżenia. */
     fun follow(v: Vehicle) {
-        if (!v.hasPosition) return
+        if (!v.hasValidPosition) return
         scope.launch { map.scrollTo(lonToX(v.longitude!!), latToY(v.latitude!!), map.scale) }
     }
 
     fun focusOn(v: Vehicle, zoom: Double = 15.0) {
-        if (!v.hasPosition) return
+        if (!v.hasValidPosition) return
         hasFitted = true
         scope.launch { map.scrollTo(lonToX(v.longitude!!), latToY(v.latitude!!), max(scaleFor(zoom), map.scale)) }
     }

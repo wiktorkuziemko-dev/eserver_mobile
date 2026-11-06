@@ -20,6 +20,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.SportsScore
+import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.vector.ImageVector
+import pl.fleet.monitor.data.RoutePause
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
@@ -119,7 +127,7 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                     selectedTrip = ui.selectedTrip,
                     fitOnSelect = ui.fitOnSelect,
                     onSelectTrip = vm::selectTrip,
-                    onSelectStop = vm::selectStop,
+                    onSelectEvent = vm::selectEvent,
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (vm.showLegend) Legend(Modifier.align(Alignment.TopEnd).padding(10.dp))
@@ -136,11 +144,11 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
 
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp)) {
                     val trip = ui.selectedTrip?.let { analysis.trips.getOrNull(it) }
-                    val stop = ui.selectedStop?.let { analysis.stops.getOrNull(it) }
+                    val event = ui.selectedEvent
                     val player = ui.player
                     when {
-                        stop != null -> StopCard(stop, ui.selectedStop!!, onClose = { vm.selectStop(null) })
-                        player.active && trip != null -> PlayerBar(ui, trip, vm)
+                        event != null -> EventCard(analysis, event, vm.mapState.pauses, onClose = { vm.selectEvent(null) })
+                        player.active -> PlayerBar(ui, trip, vm)
                         trip != null -> {
                             TripCard(
                                 trip, ui.selectedTrip!!, analysis.trips.size,
@@ -150,6 +158,8 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                             Spacer(Modifier.height(8.dp))
                             PlayButton("Odtwórz przejazd tej trasy", onClick = vm::togglePlay)
                         }
+                        // Bez wybranej trasy – animacja całego widocznego zakresu.
+                        analysis.trips.isNotEmpty() -> PlayButton("Odtwórz cały zakres", onClick = vm::togglePlay)
                     }
                 }
             }
@@ -212,36 +222,79 @@ private fun TripCard(tr: RouteTrip, index: Int, count: Int, onPrev: () -> Unit, 
 }
 
 @Composable
-private fun StopCard(st: RouteStop, index: Int, onClose: () -> Unit) {
+private fun EventCard(a: RouteAnalysis, e: MapEvent, pauses: List<RoutePause>, onClose: () -> Unit) {
+    when (e) {
+        is MapEvent.Stop -> a.stops.getOrNull(e.index)?.let { st ->
+            DetailsCard({ StopMarker(st) }, "Postój ${e.index + 1} · ${Fmt.duration(st.seconds)}", onClose) {
+                Text("Od ${Fmt.dateTime(st.start)} do ${Fmt.dateTime(st.end)}", style = MaterialTheme.typography.bodyMedium)
+                IdleLine(st)
+                AddressLine(st.address)
+            }
+        }
+        is MapEvent.TripStart -> a.trips.getOrNull(e.trip)?.let { tr ->
+            val before = a.stops.firstOrNull { it.b == tr.s }
+            DetailsCard({ EventIcon(Icons.Filled.Key, START_COLOR, parked = before != null, size = 26.dp) }, "Start trasy ${e.trip + 1}", onClose) {
+                Text("Wyjazd: ${Fmt.dateTime(tr.start)}", style = MaterialTheme.typography.bodyMedium)
+                if (before != null) {
+                    Text("Wcześniej postój ${Fmt.duration(before.seconds)} (od ${Fmt.dateTime(before.start)})", style = MaterialTheme.typography.bodyMedium)
+                    IdleLine(before)
+                }
+                AddressLine(tr.from)
+            }
+        }
+        is MapEvent.TripEnd -> a.trips.getOrNull(e.trip)?.let { tr ->
+            val after = a.stops.firstOrNull { it.a == tr.e }
+            DetailsCard({ EventIcon(Icons.Filled.SportsScore, INK, parked = after != null, size = 26.dp) }, "Koniec trasy ${e.trip + 1}", onClose) {
+                Text("Przyjazd: ${Fmt.dateTime(tr.end)}", style = MaterialTheme.typography.bodyMedium)
+                Text("Przejechano ${Fmt.km(tr.km)} w ${Fmt.duration(tr.seconds)}", style = MaterialTheme.typography.bodyMedium)
+                if (after != null) {
+                    Text("Następnie postój ${Fmt.duration(after.seconds)} (do ${Fmt.dateTime(after.end)})", style = MaterialTheme.typography.bodyMedium)
+                    IdleLine(after)
+                }
+                AddressLine(tr.to)
+            }
+        }
+        is MapEvent.Pause -> pauses.getOrNull(e.index)?.let { pz ->
+            DetailsCard({ PauseMarker() }, "Postój na trasie · ${Fmt.duration(pz.seconds)}", onClose) {
+                Text("Od ${hms(pz.start)} do ${hms(pz.end)}", style = MaterialTheme.typography.bodyMedium)
+                AddressLine(pz.address)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsCard(icon: @Composable () -> Unit, title: String, onClose: () -> Unit, body: @Composable () -> Unit) {
     Card(elevation = CardDefaults.cardElevation(6.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StopMarker(st)
+                icon()
                 Spacer(Modifier.width(10.dp))
-                Text(
-                    "Postój ${index + 1} · ${Fmt.duration(st.seconds)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Zamknij") }
             }
-            Column(Modifier.padding(end = 12.dp)) {
-                Text("Od ${Fmt.dateTime(st.start)} do ${Fmt.dateTime(st.end)}", style = MaterialTheme.typography.bodyMedium)
-                if (st.idleSeconds > 0) {
-                    Text(
-                        "Silnik pracował: ${Fmt.duration(st.idleSeconds)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (st.isIdle) IDLE_COLOR else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                if (st.address.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(st.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3, overflow = TextOverflow.Ellipsis)
-                }
-            }
+            Column(Modifier.padding(end = 12.dp)) { body() }
         }
+    }
+}
+
+@Composable
+private fun IdleLine(st: RouteStop) {
+    if (st.idleSeconds > 0) {
+        Text(
+            "Silnik pracował: ${Fmt.duration(st.idleSeconds)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (st.isIdle) IDLE_COLOR else MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun AddressLine(address: String) {
+    if (address.isNotEmpty()) {
+        Spacer(Modifier.height(4.dp))
+        Text(address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -309,10 +362,15 @@ private fun PlayButton(text: String, onClick: () -> Unit) {
 
 /** Odtwarzacz wybranej trasy: zegar, prędkość, dystans, zapłon, paliwo i adres zmieniające się w czasie. */
 @Composable
-private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip, vm: RouteMapViewModel) {
+private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip?, vm: RouteMapViewModel) {
     val p = ui.player
     val s = ui.sample
+    val a = ui.analysis ?: return
     val index = ui.selectedTrip ?: 0
+    // Zakres animacji: wybrana trasa albo cały okres
+    val start = tr?.start ?: a.points.firstOrNull()?.time ?: return
+    val end = tr?.end ?: a.points.last().time
+    val totalKm = tr?.km ?: a.km
     Card(elevation = CardDefaults.cardElevation(6.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -324,21 +382,24 @@ private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip, vm: RouteMapViewModel)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(s?.let { hms(it.time) } ?: "—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Trasa ${index + 1} · ${Fmt.dateTime(tr.start)} – ${hm(tr.end)}", style = MaterialTheme.typography.labelSmall,
+                    Text(
+                        if (tr != null) "Trasa ${index + 1} · ${Fmt.dateTime(tr.start)} – ${hm(tr.end)}"
+                        else "Cały zakres · ${s?.trip?.let { "trasa ${it + 1}" } ?: "postój"}",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("${s?.let { Fmt.decimal(it.speed, 0) } ?: "–"} km/h", style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, color = s?.let { SPEED_COLORS[speedBucket(it.speed)] } ?: Color.Unspecified)
                     // Dystans od początku tej trasy
-                    Text(if (s != null) "${Fmt.km(p.km)} z ${Fmt.km(tr.km)}" else "", style = MaterialTheme.typography.labelSmall,
+                    Text(if (s != null) "${Fmt.km(p.km)} z ${Fmt.km(totalKm)}" else "", style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = vm::closePlayer) { Icon(Icons.Outlined.Close, "Zamknij odtwarzanie") }
             }
-            val total = (tr.end - tr.start).inWholeMilliseconds
+            val total = (end - start).inWholeMilliseconds
             Slider(
-                value = p.time?.takeIf { total > 0 }?.let { ((it - tr.start).inWholeMilliseconds.toFloat() / total).coerceIn(0f, 1f) } ?: 0f,
+                value = p.time?.takeIf { total > 0 }?.let { ((it - start).inWholeMilliseconds.toFloat() / total).coerceIn(0f, 1f) } ?: 0f,
                 onValueChange = vm::seekFraction,
                 modifier = Modifier.padding(end = 8.dp).height(32.dp),
                 colors = SliderDefaults.colors(thumbColor = ACCENT, activeTrackColor = ACCENT),
@@ -365,13 +426,33 @@ private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip, vm: RouteMapViewModel)
                             onClick = { vm.setSpeed(sp) },
                             shape = SegmentedButtonDefaults.itemShape(i, PlaybackSpeed.entries.size),
                             icon = {},
-                            label = { Text(sp.label, maxLines = 1) },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(sp.icon(), null, Modifier.size(16.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(sp.label, maxLines = 1)
+                                }
+                            },
                         )
                     }
                 }
             }
+            // Śledzenie: mapa przesuwa się za pojazdem przy dowolnym przybliżeniu ustawionym przez użytkownika.
+            Row(Modifier.padding(top = 4.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.MyLocation, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(8.dp))
+                Text("Śledź pojazd", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                Switch(checked = p.follow, onCheckedChange = { vm.toggleFollow() })
+            }
         }
     }
+}
+
+/** Ikona tempa: odtwarzanie, przewijanie, rakieta. */
+private fun PlaybackSpeed.icon(): ImageVector = when (this) {
+    PlaybackSpeed.SLOW -> Icons.Filled.PlayArrow
+    PlaybackSpeed.FAST -> Icons.Filled.FastForward
+    PlaybackSpeed.ULTRA -> Icons.Filled.RocketLaunch
 }
 
 /** Przycisk wyboru trasy: „Wszystkie trasy (30)” albo opis wybranej trasy; otwiera listę tras. */

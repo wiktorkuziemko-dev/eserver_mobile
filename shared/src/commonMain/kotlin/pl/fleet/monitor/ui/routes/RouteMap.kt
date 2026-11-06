@@ -54,6 +54,13 @@ import pl.fleet.monitor.data.RouteAnalysis
 import pl.fleet.monitor.data.RoutePoint
 import pl.fleet.monitor.data.RouteStop
 import pl.fleet.monitor.data.RouteSample
+import pl.fleet.monitor.data.RoutePause
+import pl.fleet.monitor.data.pausesIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.SportsScore
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
 import ovh.plrapps.mapcompose.api.moveMarker
 import ovh.plrapps.mapcompose.api.updateMarkerClickable
 import pl.fleet.monitor.data.speedBucket
@@ -74,9 +81,10 @@ internal val SPEED_COLORS = listOf(Color(0xFF2F7FD1), Color(0xFF23A17A), Color(0
 internal val SPEED_LABELS = listOf("< 30", "30–60", "60–90", "90–120", "≥ 120")
 internal val PARK_COLOR = Color(0xFF1F5FBF)
 internal val IDLE_COLOR = Color(0xFFE0661B)
-private val START_COLOR = Color(0xFF23A17A)
+internal val PAUSE_COLOR = Color(0xFF6E9BE0)
+internal val START_COLOR = Color(0xFF23A17A)
 private val END_COLOR = Color(0xFFC4283A)
-private val INK = Color(0xFF1A2028)
+internal val INK = Color(0xFF1A2028)
 private val GAP_COLOR = Color(0xFF5B6571)
 
 /** Postój z pracującym silnikiem dłużej niż 5 min – znacznik pomarańczowy. */
@@ -106,6 +114,10 @@ class RouteMapState {
     internal var focusTrip by mutableStateOf<Int?>(null)
 
     internal var drawn: RouteAnalysis? = null
+
+    /** Krótkie postoje na wybranej trasie (znaczniki „p0”, „p1”…). */
+    internal var pauses: List<RoutePause> = emptyList()
+    private var pauseIds = emptyList<String>()
     private val segments = mutableMapOf<Int, List<Segment>>()
     private var gapIds = emptyList<String>()
 
@@ -162,9 +174,8 @@ class RouteMapState {
 
         a.stops.forEachIndexed { si, st ->
             map.addMarker("s$si", lonToX(st.lon), latToY(st.lat), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 2f) {
-                // Przy wybranej trasie widać tylko postoje na jej początku i końcu.
-                val hidden = focusTrip?.let { ft -> a.trips.getOrNull(ft)?.let { st.b != it.s && st.a != it.e } } ?: false
-                StopMarker(st, Modifier.alpha(if (hidden) 0f else 1f))
+                // Przy wybranej trasie postoje na jej początku i końcu pokazują ikony kluczyka i mety (z oznaczeniem P).
+                StopMarker(st, Modifier.alpha(if (focusTrip != null) 0f else 1f))
             }
         }
         val first = p.first()
@@ -180,13 +191,17 @@ class RouteMapState {
 
     /**
      * Pokazuje tylko wybraną trasę (pozostałe trasy, przerwy, postoje i flagi A/B są ukryte):
-     * biała obwódka, ciemny środek, kolory prędkości na wierzchu, flagi S/K. null = wszystkie trasy.
+     * biała obwódka, ciemny środek, kolory prędkości na wierzchu, kluczyk na starcie, meta na końcu
+     * i krótkie postoje na trasie. null = wszystkie trasy.
      */
     internal fun focus(ti: Int?, fitToTrip: Boolean = true) {
         val a = drawn ?: return
         map.removePaths { it.startsWith("h") }
-        map.removeMarker("S")
-        map.removeMarker("K")
+        map.removeMarker(START_ID)
+        map.removeMarker(END_ID)
+        pauseIds.forEach { map.removeMarker(it) }
+        pauseIds = emptyList()
+        pauses = emptyList()
         focusTrip = ti
         val tr = ti?.let { a.trips.getOrNull(it) }
         segments.forEach { (i, list) ->
@@ -194,9 +209,7 @@ class RouteMapState {
             list.forEach { map.updatePath(it.id, color = it.color.copy(alpha = alpha), clickable = tr == null) }
         }
         gapIds.forEach { map.updatePath(it, color = GAP_COLOR.copy(alpha = if (tr == null) 0.8f else 0f)) }
-        a.stops.forEachIndexed { si, st ->
-            map.updateMarkerClickable("s$si", tr == null || st.b == tr.s || st.a == tr.e)
-        }
+        a.stops.forEachIndexed { si, _ -> map.updateMarkerClickable("s$si", tr == null) }
         if (tr == null || ti == null) return
 
         val p = a.points
@@ -206,11 +219,21 @@ class RouteMapState {
         segments[ti].orEmpty().forEach { s ->
             map.addPath("h_${s.id}", width = 5.dp, color = s.color, zIndex = 7f) { addPoints(s.xy) }
         }
-        map.addMarker("S", p[tr.s].x(), p[tr.s].y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 8f, clickable = false) {
-            Flag("S", START_COLOR, 28.dp)
+        val stopBefore = a.stops.any { it.b == tr.s }
+        val stopAfter = a.stops.any { it.a == tr.e }
+        pauses = a.pausesIn(tr)
+        pauseIds = pauses.mapIndexed { j, pz ->
+            val id = "p$j"
+            map.addMarker(id, lonToX(pz.lon), latToY(pz.lat), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 8f) {
+                PauseMarker()
+            }
+            id
         }
-        map.addMarker("K", p[tr.e].x(), p[tr.e].y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 8f, clickable = false) {
-            Flag("K", END_COLOR, 28.dp)
+        map.addMarker(START_ID, p[tr.s].x(), p[tr.s].y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 9f) {
+            EventIcon(Icons.Filled.Key, START_COLOR, parked = stopBefore)
+        }
+        map.addMarker(END_ID, p[tr.e].x(), p[tr.e].y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 9f) {
+            EventIcon(Icons.Filled.SportsScore, INK, parked = stopAfter)
         }
         if (fitToTrip) fit((tr.s..tr.e).map { p[it] }, maxZoom = 16.0, animate = true)
     }
@@ -240,8 +263,10 @@ class RouteMapState {
         vehicleShown = false
     }
 
-    internal fun focusStop(st: RouteStop) {
-        scope.launch { map.scrollTo(lonToX(st.lon), latToY(st.lat), max(map.scale, scaleFor(15.0))) }
+    internal fun focusStop(st: RouteStop) = centerOn(st.lat, st.lon)
+
+    internal fun centerOn(lat: Double, lon: Double) {
+        scope.launch { map.scrollTo(lonToX(lon), latToY(lat), max(map.scale, scaleFor(15.0))) }
     }
 
     private fun fit(points: List<RoutePoint>, maxZoom: Double, animate: Boolean) {
@@ -266,6 +291,16 @@ class RouteMapState {
 
 private const val MIN_SPAN = 2e-5
 private const val VEHICLE_ID = "veh"
+private const val START_ID = "start"
+private const val END_ID = "end"
+
+/** Zdarzenie na mapie tras, którego szczegóły pokazuje karta u dołu. */
+sealed interface MapEvent {
+    data class Stop(val index: Int) : MapEvent
+    data class TripStart(val trip: Int) : MapEvent
+    data class TripEnd(val trip: Int) : MapEvent
+    data class Pause(val trip: Int, val index: Int) : MapEvent
+}
 
 private fun RoutePoint.x() = lonToX(lon)
 private fun RoutePoint.y() = latToY(lat)
@@ -278,23 +313,31 @@ fun RouteMap(
     selectedTrip: Int?,
     fitOnSelect: Boolean,
     onSelectTrip: (Int?) -> Unit,
-    onSelectStop: (Int?) -> Unit,
+    onSelectEvent: (MapEvent?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current.density
     SideEffect { state.updateDensity(density) }
     val selectTrip by rememberUpdatedState(onSelectTrip)
-    val selectStop by rememberUpdatedState(onSelectStop)
+    val selectEvent by rememberUpdatedState(onSelectEvent)
 
     LaunchedEffect(state) {
         state.map.onPathClick { id, _, _ ->
-            id.removePrefix("t").substringBefore('_').toIntOrNull()?.let { selectStop(null); selectTrip(it) }
+            id.removePrefix("t").substringBefore('_').toIntOrNull()?.let { selectEvent(null); selectTrip(it) }
         }
         state.map.onMarkerClick { id, _, _ ->
-            id.removePrefix("s").toIntOrNull()?.let { selectStop(it) }
+            val ft = state.focusTrip
+            val e = when {
+                id == START_ID && ft != null -> MapEvent.TripStart(ft)
+                id == END_ID && ft != null -> MapEvent.TripEnd(ft)
+                id.startsWith("p") && ft != null -> id.drop(1).toIntOrNull()?.let { MapEvent.Pause(ft, it) }
+                id.startsWith("s") -> id.drop(1).toIntOrNull()?.let { MapEvent.Stop(it) }
+                else -> null
+            }
+            if (e != null) selectEvent(e)
         }
-        // Dotknięcie mapy zamyka tylko kartę postoju – wybór trasy zmienia się z listy tras.
-        state.map.onTap { _, _ -> selectStop(null) }
+        // Dotknięcie mapy zamyka tylko kartę zdarzenia – wybór trasy zmienia się z listy tras.
+        state.map.onTap { _, _ -> selectEvent(null) }
     }
     LaunchedEffect(analysis) {
         if (state.drawn !== analysis) state.draw(analysis)
@@ -327,6 +370,42 @@ private fun PlaybackVehicle(bearing: Float) {
             }
             drawPath(path, Color(0xFFF0AD1C))
         }
+    }
+}
+
+/** Kluczyk (start trasy) albo meta (koniec); z plakietką P, gdy obok jest postój. */
+@Composable
+internal fun EventIcon(icon: ImageVector, color: Color, parked: Boolean, size: Dp = 30.dp) {
+    Box(Modifier.size(size + 8.dp)) {
+        Box(
+            Modifier.align(Alignment.Center).size(size).shadow(3.dp, CircleShape)
+                .background(color, CircleShape).border(2.dp, Color.White, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, Modifier.size(size * 0.6f), tint = Color.White)
+        }
+        if (parked) {
+            Box(
+                Modifier.align(Alignment.TopEnd).size(15.dp).background(PARK_COLOR, RoundedCornerShape(3.dp))
+                    .border(1.5.dp, Color.White, RoundedCornerShape(3.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("P", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+            }
+        }
+    }
+}
+
+/** Krótki postój na trasie: mały, jaśniejszy znacznik P. */
+@Composable
+internal fun PauseMarker() {
+    Box(
+        Modifier.size(18.dp).shadow(2.dp, RoundedCornerShape(4.dp))
+            .background(PAUSE_COLOR, RoundedCornerShape(4.dp))
+            .border(1.5.dp, Color.White, RoundedCornerShape(4.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("P", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
     }
 }
 

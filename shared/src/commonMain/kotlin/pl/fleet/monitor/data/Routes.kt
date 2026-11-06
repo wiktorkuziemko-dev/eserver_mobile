@@ -267,3 +267,42 @@ class RoutePlayback(val analysis: RouteAnalysis) {
         )
     }
 }
+
+/** Krótki postój w trakcie trasy (np. korek, wysiadka), krótszy niż postój dzielący trasy. */
+data class RoutePause(
+    val a: Int,
+    val b: Int,
+    val start: Instant,
+    val end: Instant,
+    val lat: Double,
+    val lon: Double,
+    val address: String,
+) {
+    val seconds: Long get() = (end - start).inWholeSeconds
+}
+
+/**
+ * Postoje wewnątrz trasy: ciągi punktów z prędkością < [stillKmh] i przesunięciem < 250 m
+ * trwające co najmniej [minSeconds] (krótsze, np. światła, pomijamy).
+ */
+fun RouteAnalysis.pausesIn(trip: RouteTrip, minSeconds: Long = 120, stillKmh: Double = 3.0): List<RoutePause> {
+    val p = points
+    val out = mutableListOf<RoutePause>()
+    var k = trip.s
+    while (k < trip.e) {
+        val still = p[k].speed < stillKmh && p[k + 1].speed < stillKmh && dist(p[k], p[k + 1]) < 0.25
+        if (!still) { k++; continue }
+        val a = k
+        while (k < trip.e && p[k].speed < stillKmh && p[k + 1].speed < stillKmh && dist(p[k], p[k + 1]) < 0.25) k++
+        val b = k
+        if ((p[b].time - p[a].time).inWholeSeconds >= minSeconds) {
+            val cnt = b - a + 1
+            out += RoutePause(
+                a, b, p[a].time, p[b].time,
+                (a..b).sumOf { p[it].lat } / cnt, (a..b).sumOf { p[it].lon } / cnt,
+                (a..b).firstNotNullOfOrNull { p[it].address.takeIf(String::isNotEmpty) }.orEmpty(),
+            )
+        }
+    }
+    return out
+}

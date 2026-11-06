@@ -61,6 +61,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pl.fleet.monitor.data.Vehicle
 import pl.fleet.monitor.data.now
@@ -135,7 +137,22 @@ fun VehicleDetailsScreen(
             }
 
             SectionTitle("Bieżąca aktywność")
-            CurrentActivityCard(ui.status, vehicle, onShowOnMap)
+            CurrentActivityCard(
+                ui.status, vehicle, onShowOnMap,
+                onGoogleMaps = { vehicle.latitude?.let { lat -> vehicle.longitude?.let { lon -> platform.openGoogleMaps(lat, lon) } } },
+            )
+
+            // Dwa główne przyciski tej samej wysokości: mapa tras i statystyka (tabela z funkcji history).
+            Spacer(Modifier.size(12.dp))
+            GradientButton(onClick = onRouteMap, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(Icons.Outlined.Route, null, Modifier.size(22.dp)); Spacer(Modifier.width(8.dp)); Text("Trasy na mapie")
+            }
+            Spacer(Modifier.size(8.dp))
+            OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(Icons.Outlined.BarChart, null, Modifier.size(22.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Statystyka tras")
+            }
 
             SectionTitle("Dane pojazdu")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -169,28 +186,7 @@ fun VehicleDetailsScreen(
                 }
             }
 
-            Spacer(Modifier.size(20.dp))
-            // Dwa główne przyciski tej samej wysokości: mapa tras i statystyka (tabela z funkcji history).
-            GradientButton(onClick = onRouteMap, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Outlined.Route, null, Modifier.size(22.dp)); Spacer(Modifier.width(8.dp)); Text("Trasy na mapie")
-            }
-            Spacer(Modifier.size(8.dp))
-            OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Outlined.BarChart, null, Modifier.size(22.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Statystyka tras")
-            }
-            Spacer(Modifier.size(8.dp))
-            OutlinedButton(
-                onClick = { vehicle.latitude?.let { lat -> vehicle.longitude?.let { lon -> platform.openGoogleMaps(lat, lon) } } },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = vehicle.hasPosition,
-            ) {
-                Icon(GoogleMapsPin, null, Modifier.size(20.dp), tint = Color.Unspecified)
-                Spacer(Modifier.width(8.dp))
-                Text("Pokaż w Google Maps")
-            }
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(16.dp))
             // Diagnostyka API – ukryta; włączana stałą SHOW_API_DIAGNOSTICS (przydatne przy problemach z serwerem).
             if (SHOW_API_DIAGNOSTICS) {
                 TextButton(onClick = vm::runDiagnostics, modifier = Modifier.align(Alignment.CenterHorizontally)) {
@@ -248,6 +244,7 @@ private fun CurrentActivityCard(
     status: Loadable<pl.fleet.monitor.data.MotionStatus>,
     vehicle: Vehicle,
     onShowOnMap: () -> Unit,
+    onGoogleMaps: () -> Unit,
 ) {
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
         Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -291,14 +288,28 @@ private fun CurrentActivityCard(
                 }
             }
         }
-        OutlinedButton(
-            onClick = onShowOnMap,
-            enabled = vehicle.hasPosition,
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-        ) {
-            Icon(Icons.Outlined.Map, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Pokaż na mapie")
+        // Dwa przyciski w jednym wierszu, każdy na połowę szerokości.
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = onShowOnMap,
+                enabled = vehicle.hasPosition,
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Icon(Icons.Outlined.Map, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Pokaż na mapie", textAlign = TextAlign.Center)
+            }
+            OutlinedButton(
+                onClick = onGoogleMaps,
+                enabled = vehicle.hasPosition,
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Icon(GoogleMapsPin, null, Modifier.size(18.dp), tint = Color.Unspecified)
+                Spacer(Modifier.width(6.dp))
+                Text("Pokaż w Google Maps", textAlign = TextAlign.Center)
+            }
         }
     }
 }

@@ -122,3 +122,19 @@ class RoutePlaybackTest {
         assertEquals(50.0, pb.sampleAt(T0 - 10.seconds)!!.lat, 1e-9)
     }
 }
+
+class RoutePausesTest {
+    @Test fun findsShortStopsInsideTrip() {
+        val points = buildList {
+            for (k in 0..4) add(pt(k * 60L, 50.0 + k * 0.005, 19.0, 40.0))          // jazda
+            for (k in 1..3) add(pt(240L + k * 60L, 50.02, 19.0, 0.0, addr = "Sklep")) // 3 min stania (< 5 min – nie dzieli trasy)
+            for (k in 1..4) add(pt(420L + k * 60L, 50.02 + k * 0.005, 19.0, 40.0))   // dalsza jazda
+        }
+        val a = analyzeRoute(points)
+        assertEquals(1, a.trips.size)
+        val pauses = a.pausesIn(a.trips.single())
+        assertEquals(1, pauses.size)
+        assertEquals("Sklep", pauses.single().address)
+        assertTrue(pauses.single().seconds >= 120)
+    }
+}

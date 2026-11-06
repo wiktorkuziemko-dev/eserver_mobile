@@ -126,6 +126,43 @@ class EServerApi(
         )
     }
 
+    /**
+     * Punkty trasy z okresu (funkcja `routes`): pozycja, prędkość, zapłon, paliwo, adres.
+     * Zwraca punkty uporządkowane i oczyszczone ([cleanRoutePoints]).
+     */
+    suspend fun routes(c: Credentials, serial: String, from: Instant, to: Instant): List<RoutePoint> {
+        val root = post(c, "routes", mapOf(
+            "serial" to serial,
+            "date_from" to ApiDates.format(from),
+            "date_to" to ApiDates.format(to),
+            "date_format" to ApiDates.FORMAT,
+        ))
+        val obj = root as? JsonObject ?: throw ApiException.Parse(IllegalStateException("not an object"))
+        val result = (obj["result"] as? JsonPrimitive)?.contentOrNull
+        if (result != null && !result.equals("OK", ignoreCase = true)) dataOf(obj)
+        val items = when (val d = obj["data"]) {
+            is JsonArray -> d
+            is JsonObject -> d.values.toList()
+            else -> emptyList()
+        }
+        val raw = items.mapNotNull { item ->
+            val o = item as? JsonObject ?: return@mapNotNull null
+            val time = ApiDates.parse(o["date"]) ?: return@mapNotNull null
+            val lat = o["pos_h"].asDouble() ?: return@mapNotNull null
+            val lon = o["pos_v"].asDouble() ?: return@mapNotNull null
+            RoutePoint(
+                time = time,
+                lat = lat,
+                lon = lon,
+                speed = o["speed"].asDouble() ?: Double.NaN,
+                ignition = (o["ignition"] as? JsonPrimitive)?.takeIf { it.contentOrNull != null }?.let { o["ignition"].asBoolean() },
+                fuel = o["fuel"].asDouble()?.toInt(),
+                address = (o["address"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty(),
+            )
+        }
+        return cleanRoutePoints(raw)
+    }
+
     suspend fun lastReadingDate(c: Credentials, serial: String): Instant? {
         val root = post(c, "last_reading_date", mapOf("serial" to serial, "date_format" to ApiDates.FORMAT))
             as? JsonObject ?: return null

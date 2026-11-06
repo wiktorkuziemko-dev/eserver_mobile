@@ -1,5 +1,7 @@
 package pl.fleet.monitor
 
+import pl.fleet.monitor.ui.routes.RouteMapScreen
+import pl.fleet.monitor.ui.routes.RouteMapViewModel
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -38,6 +40,8 @@ private object Routes {
     const val VISIBILITY = "visibility"
     const val VEHICLE = "vehicle/{id}"
     const val HISTORY = "history/{id}?serial={serial}"
+    const val ROUTES = "routes/{id}?serial={serial}"
+    fun routes(id: String, serial: String) = "routes/$id?serial=$serial"
     fun vehicle(id: String) = "vehicle/$id"
     fun history(id: String, serial: String) = "history/$id?serial=$serial"
 }
@@ -89,6 +93,7 @@ private fun AppNavigation() {
                     vm = vm,
                     onBack = { nav.popBackStack() },
                     onHistory = { nav.navigate(Routes.history(id, vehicle.serial)) },
+                    onRouteMap = { nav.navigate(Routes.routes(id, vehicle.serial)) },
                     onRefresh = fleetVm::refresh,
                     onShowOnMap = {
                         fleetVm.showOnMap(id)
@@ -110,6 +115,20 @@ private fun AppNavigation() {
             val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.label.orEmpty()
             val vm: HistoryViewModel = viewModel(key = "history-$id") { HistoryViewModel(serial) }
             HistoryScreen(vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() })
+        }
+
+        composable(
+            Routes.ROUTES,
+            arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("serial") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) { entry ->
+            val id = entry.savedStateHandle.get<String>("id").orEmpty()
+            val serial = entry.savedStateHandle.get<String>("serial").orEmpty()
+            val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.label.orEmpty()
+            val vm: RouteMapViewModel = viewModel(key = "routes-$id") { RouteMapViewModel(serial) }
+            RouteMapScreen(vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() })
         }
     }
 }

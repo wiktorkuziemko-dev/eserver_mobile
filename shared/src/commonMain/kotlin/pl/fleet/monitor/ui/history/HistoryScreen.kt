@@ -130,44 +130,9 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
     }
 
     if (showPicker) {
-        val state = rememberDateRangePickerState(
-            initialSelectedStartDateMillis = ui.from.toEpochMillis(),
-            initialSelectedEndDateMillis = ui.to.toEpochMillis(),
-            selectableDates = object : androidx.compose.material3.SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= Fmt.today().toEpochMillis()
-            },
-        )
-        val startSel = state.selectedStartDateMillis?.toLocalDate()
-        val endSel = state.selectedEndDateMillis?.toLocalDate() ?: startSel
-        val days = if (startSel != null && endSel != null) startSel.daysUntil(endSel) + 1 else 0
-        val tooLong = days > MAX_DAYS
-        DatePickerDialog(
-            onDismissRequest = { showPicker = false },
-            confirmButton = {
-                TextButton(
-                    enabled = startSel != null && !tooLong,
-                    onClick = {
-                        val start = state.selectedStartDateMillis!!.toLocalDate()
-                        val end = state.selectedEndDateMillis?.toLocalDate() ?: start
-                        showPicker = false
-                        vm.setCustomRange(start, end)
-                    },
-                ) { Text("Pokaż") }
-            },
-            dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Anuluj") } },
-        ) {
-            DateRangePicker(state = state, modifier = Modifier.weight(1f), title = {
-                Column(Modifier.padding(start = 24.dp, top = 16.dp, end = 12.dp)) {
-                    Text("Wybierz zakres dat (maks. $MAX_DAYS dni)")
-                    if (tooLong) {
-                        Text(
-                            "Wybrany okres ma $days dni – skróć go do $MAX_DAYS dni.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            })
+        DateRangeDialog(ui.from, ui.to, MAX_DAYS, onDismiss = { showPicker = false }) { start, end ->
+            showPicker = false
+            vm.setCustomRange(start, end)
         }
     }
 }
@@ -279,5 +244,3 @@ private fun TimeCell(t: Instant?, day: LocalDate) {
     }
 }
 
-private fun LocalDate.toEpochMillis() = atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
-private fun Long.toLocalDate() = Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.UTC).date

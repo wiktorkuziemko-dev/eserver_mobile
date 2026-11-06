@@ -85,6 +85,7 @@ fun VehicleDetailsScreen(
     vm: VehicleDetailsViewModel,
     onBack: () -> Unit,
     onHistory: () -> Unit,
+    onRouteMap: () -> Unit,
     onRefresh: () -> Unit,
     onShowOnMap: () -> Unit,
 ) {
@@ -170,6 +171,12 @@ fun VehicleDetailsScreen(
             Spacer(Modifier.size(20.dp))
             GradientButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Outlined.History, null); Spacer(Modifier.width(8.dp)); Text("Historia tras")
+            }
+            Spacer(Modifier.size(8.dp))
+            OutlinedButton(onClick = onRouteMap, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.Route, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Trasy na mapie")
             }
             Spacer(Modifier.size(8.dp))
             OutlinedButton(

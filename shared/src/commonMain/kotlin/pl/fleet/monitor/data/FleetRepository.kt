@@ -30,6 +30,8 @@ class FleetRepository(
 
     suspend fun status(serial: String, at: Instant = now()) = api.status(creds(), normalizeSerial(serial), at)
 
+    suspend fun routes(serial: String, from: Instant, to: Instant) = api.routes(creds(), normalizeSerial(serial), from, to)
+
     suspend fun lastReport(serial: String) = api.lastReadingDate(creds(), normalizeSerial(serial))
 
     suspend fun history(serial: String, from: Instant, to: Instant, details: Boolean = true) =

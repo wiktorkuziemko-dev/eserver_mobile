@@ -98,19 +98,19 @@ import kotlin.math.tan
 
 // ---- Siatka kafelków OpenStreetMap (Web Mercator, poziomy 0–18) ----
 
-private const val LEVELS = 19
-private const val TILE_SIZE = 256
-private const val FULL_SIZE = TILE_SIZE shl (LEVELS - 1)
+internal const val LEVELS = 19
+internal const val TILE_SIZE = 256
+internal const val FULL_SIZE = TILE_SIZE shl (LEVELS - 1)
 
-private fun lonToX(lon: Double) = ((lon + 180.0) / 360.0).coerceIn(0.0, 1.0)
+internal fun lonToX(lon: Double) = ((lon + 180.0) / 360.0).coerceIn(0.0, 1.0)
 
-private fun latToY(lat: Double): Double {
+internal fun latToY(lat: Double): Double {
     val r = lat.coerceIn(-85.0, 85.0) * PI / 180.0
     return ((1.0 - ln(tan(r) + 1.0 / cos(r)) / PI) / 2.0).coerceIn(0.0, 1.0)
 }
 
 /** Skala MapCompose odpowiadająca poziomowi przybliżenia OSM (18 = skala 1). */
-private fun zoomToScale(zoom: Double) = 2.0.pow(zoom - (LEVELS - 1))
+internal fun zoomToScale(zoom: Double) = 2.0.pow(zoom - (LEVELS - 1))
 
 private val tileClient by lazy { platformTileHttpClient() }
 
@@ -120,7 +120,7 @@ private val tileCache: TileCache? by lazy {
 }
 
 /** Kafelki: najpierw z dysku, potem z serwera OSM (wymagany identyfikujący User-Agent). */
-private val osmTiles = TileStreamProvider { row, col, zoom ->
+internal val osmTiles = TileStreamProvider { row, col, zoom ->
     tileCache?.read(zoom, col, row)?.let { return@TileStreamProvider Buffer().apply { write(it) } }
     try {
         val r = tileClient.get("https://tile.openstreetmap.org/$zoom/$col/$row.png") {
@@ -146,7 +146,7 @@ private const val MIN_SPAN = 2e-5
 private const val CLUSTER_ID = "vehicles"
 
 /** Gęstość ekranu przyjmowana przed pierwszym pomiarem (typowy telefon). */
-private const val DEFAULT_DENSITY = 2.75f
+internal const val DEFAULT_DENSITY = 2.75f
 
 /** Dane znacznika – zmiana wartości odświeża tylko ten znacznik. */
 internal data class MarkerUi(val label: String, val state: VehicleState, val icon: VehicleIcon, val selected: Boolean)
@@ -327,16 +327,21 @@ fun FleetMap(
 
     Box(modifier) {
         MapUI(Modifier.matchParentSize(), state = state.map)
-        // Wymagane oznaczenie autorstwa danych mapy
-        Text(
-            "© OpenStreetMap",
-            Modifier.align(Alignment.BottomEnd).padding(4.dp)
-                .background(Color.White.copy(alpha = 0.75f), RoundedCornerShape(4.dp))
-                .padding(horizontal = 4.dp, vertical = 1.dp),
-            fontSize = 9.sp,
-            color = Color(0xFF3F4045),
-        )
+        OsmAttribution(Modifier.align(Alignment.BottomEnd))
     }
+}
+
+/** Wymagane oznaczenie autorstwa danych mapy. */
+@Composable
+internal fun OsmAttribution(modifier: Modifier = Modifier) {
+    Text(
+        "© OpenStreetMap",
+        modifier.padding(4.dp)
+            .background(Color.White.copy(alpha = 0.75f), RoundedCornerShape(4.dp))
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+        fontSize = 9.sp,
+        color = Color(0xFF3F4045),
+    )
 }
 
 // ---- Znacznik pojazdu ----

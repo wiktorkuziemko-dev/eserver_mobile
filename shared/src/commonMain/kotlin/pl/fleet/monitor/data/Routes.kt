@@ -400,3 +400,61 @@ fun analyzeByEvents(points: List<RoutePoint>, minStopSeconds: Long = 60): RouteA
     val gaps = trips.flatMap { tr -> (tr.s until tr.e).filter { edges.gap[it] }.map { RouteGap(it, edges.d[it]) } }
     return RouteAnalysis(p, trips, stops, gaps)
 }
+
+/**
+ * Trasy i postoje według funkcji history (to samo, co pokazuje Statystyka tras):
+ * podział, godziny i kilometry pochodzą z historii, a punkty z routes służą do rysowania,
+ * prędkości i animacji. Punkty przypisujemy do przedziałów begin–end kolejnych wpisów historii.
+ * Zwraca null, gdy historia nie ma wpisów (wtedy używamy analizy samych punktów).
+ */
+fun analyzeWithHistory(points: List<RoutePoint>, history: HistorySummary): RouteAnalysis? {
+    val entries = history.entries.filter { it.begin != null && it.end != null }.sortedBy { it.begin }
+    if (entries.isEmpty()) return null
+    val from = entries.first().begin!!
+    val to = entries.last().end!!
+    // Punkty spoza osi czasu historii (zapas zakresu routes) odrzucamy.
+    val p = points.filter { it.time >= from && it.time <= to }
+    if (p.isEmpty()) return null
+    val n = p.size
+    val edges = Edges(p)
+
+    fun firstAtOrAfter(t: Instant): Int = p.indexOfFirst { it.time >= t }.let { if (it < 0) n - 1 else it }
+    fun lastAtOrBefore(t: Instant): Int = p.indexOfLast { it.time <= t }.let { if (it < 0) 0 else it }
+
+    val trips = mutableListOf<RouteTrip>()
+    val stops = mutableListOf<RouteStop>()
+    for (e in entries) {
+        val begin = e.begin!!
+        val end = e.end!!
+        if (e.motion) {
+            val s = firstAtOrAfter(begin).coerceAtMost(lastAtOrBefore(end))
+            val en = max(s, lastAtOrBefore(end))
+            var mx = 0.0
+            for (k in s..en) mx = max(mx, p[k].speed)
+            var hav = 0.0
+            for (k in s until en) if (!edges.gap[k]) hav += edges.d[k]
+            val km = e.distanceKm ?: hav
+            val hours = (end - begin).inWholeMilliseconds / 3_600_000.0
+            trips += RouteTrip(s, en, begin, end, km, mx, if (hours > 0) km / hours else 0.0, p[s].address, p[en].address)
+        } else {
+            // Postój: od ostatniego punktu poprzedniej trasy do pierwszego punktu następnej.
+            val a = lastAtOrBefore(begin)
+            val b = max(a, firstAtOrAfter(end))
+            val at = p[firstAtOrAfter(begin).coerceAtMost(b)]
+            var idle = 0L
+            for (k in a until b) if (p[k].ignition == true && p[k + 1].ignition == true) idle += (p[k + 1].time - p[k].time).inWholeMilliseconds
+            val addr = (a..b).firstNotNullOfOrNull { p[it].address.takeIf(String::isNotEmpty) }.orEmpty()
+            stops += RouteStop(a, b, begin, end, at.lat, at.lon, idle / 1000, addr)
+        }
+    }
+    val gaps = trips.flatMap { tr -> (tr.s until tr.e).filter { edges.gap[it] }.map { RouteGap(it, edges.d[it]) } }
+    return RouteAnalysis(p, trips, stops, gaps)
+}
+
+/** Odległość wzdłuż punktów [s]..[e] w linii prostej między raportami (bez przerw w danych) [km]. */
+fun RouteAnalysis.pointsKm(s: Int, e: Int): Double {
+    var x = 0.0
+    val gapIdx = gaps.map { it.index }.toSet()
+    for (k in s until e) if (k !in gapIdx) x += haversineKm(points[k].lat, points[k].lon, points[k + 1].lat, points[k + 1].lon)
+    return x
+}

@@ -178,3 +178,38 @@ class RouteEventsTest {
         assertEquals(a.trips, analyzeRoute(points).trips)
     }
 }
+
+class RouteHistoryTest {
+    private fun at(sec: Long) = T0 + sec.seconds
+
+    @Test fun tripsAndKilometresComeFromHistory() {
+        val points = listOf(
+            pt(-7200, 49.9, 19.0, 0.0),       // zapas przed historią – odrzucany
+            pt(0, 50.0, 19.0, 0.0, ign = false),
+            pt(600, 50.0, 19.0, 0.0),
+            pt(660, 50.01, 19.0, 50.0),
+            pt(720, 50.02, 19.0, 50.0),
+            pt(780, 50.03, 19.0, 0.0, ign = false),
+            pt(1800, 50.03, 19.0, 0.0, ign = false),
+        )
+        val history = HistorySummary(
+            distanceKm = 3.4, drivingSeconds = 180, parkingSeconds = 1620,
+            entries = listOf(
+                HistoryEntry(false, at(-3600), at(600), null),  // postój zaczęty przed pierwszym punktem
+                HistoryEntry(true, at(600), at(780), 3.4),
+                HistoryEntry(false, at(780), at(1800), null),
+            ),
+        )
+        val a = analyzeWithHistory(points, history)!!
+        assertEquals(6, a.points.size)
+        assertEquals(1, a.trips.size)
+        assertEquals(3.4, a.trips.single().km)          // km z historii, nie z punktów
+        assertEquals(at(600), a.trips.single().start)
+        assertEquals(1, a.trips.single().s)
+        assertEquals(4, a.trips.single().e)
+        assertEquals(2, a.stops.size)
+        assertEquals(at(-3600), a.stops.first().start)   // prawdziwy początek postoju z historii
+        assertEquals(50.03, a.stops.last().lat, 1e-9)
+        assertTrue(a.pointsKm(1, 4) in 3.2..3.4)
+    }
+}

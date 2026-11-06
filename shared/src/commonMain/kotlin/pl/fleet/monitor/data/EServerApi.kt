@@ -45,7 +45,7 @@ data class Credentials(val login: String, val passwordMd5: String) {
 }
 
 sealed class ApiException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    class Unauthorized : ApiException("Błędny login lub hasło albo brak aktywnego dostępu do API (HTTP 403).")
+    class Unauthorized : ApiException("Podane błędne dane logowania lub nie posiadasz uprawnień do aplikacji mobilnej")
     class Http(val code: Int) : ApiException("Serwer zwrócił błąd HTTP $code.")
     class Network(cause: Throwable) :
         ApiException("Brak połączenia z serwerem lub przekroczony czas odpowiedzi (${cause::class.simpleName}).", cause)

@@ -222,7 +222,7 @@ fun LoginScreen(vm: LoginViewModel) {
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Dostęp do API musi być aktywowany na koncie przez operatora platformy.",
+                    "Wymagane jest włączenie dostępu do aplikacji mobilnej przez operatora.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

@@ -152,9 +152,9 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                 val error = ui.error
                 when {
                     error != null -> InfoBubble("Nie udało się pobrać tras", error, Modifier.align(Alignment.Center), onRetry = vm::load)
-                    !ui.loading && ui.analysis != null && analysis.points.isEmpty() -> InfoBubble(
-                        "Brak tras w tym okresie",
-                        "Pojazd nie wysłał pozycji. Wybierz inny zakres dat.",
+                    !ui.loading && ui.analysis != null && analysis.trips.isEmpty() -> InfoBubble(
+                        "Brak tras",
+                        "Dla wskazanej daty na serwerze nie ma zarejestrowanej żadnej trasy",
                         Modifier.align(Alignment.Center),
                     )
                 }
@@ -256,7 +256,6 @@ private fun EventCard(a: RouteAnalysis, e: MapEvent, pauses: List<RoutePause>, o
         is MapEvent.Stop -> a.stops.getOrNull(e.index)?.let { st ->
             DetailsCard({ StopMarker(st) }, "Postój ${e.index + 1} · ${Fmt.duration(st.seconds)}", onClose) {
                 Text("Od ${Fmt.dateTime(st.start)} do ${Fmt.dateTime(st.end)}", style = MaterialTheme.typography.bodyMedium)
-                IdleLine(st)
                 AddressLine(st.address)
             }
         }
@@ -266,7 +265,6 @@ private fun EventCard(a: RouteAnalysis, e: MapEvent, pauses: List<RoutePause>, o
                 Text("Wyjazd: ${Fmt.dateTime(tr.start)}", style = MaterialTheme.typography.bodyMedium)
                 if (before != null) {
                     Text("Wcześniej postój ${Fmt.duration(before.seconds)} (od ${Fmt.dateTime(before.start)})", style = MaterialTheme.typography.bodyMedium)
-                    IdleLine(before)
                 }
                 AddressLine(tr.from)
             }
@@ -278,7 +276,6 @@ private fun EventCard(a: RouteAnalysis, e: MapEvent, pauses: List<RoutePause>, o
                 Text("Przejechano ${Fmt.km(tr.km)} w ${Fmt.duration(tr.seconds)}", style = MaterialTheme.typography.bodyMedium)
                 if (after != null) {
                     Text("Następnie postój ${Fmt.duration(after.seconds)} (do ${Fmt.dateTime(after.end)})", style = MaterialTheme.typography.bodyMedium)
-                    IdleLine(after)
                 }
                 AddressLine(tr.to)
             }
@@ -304,17 +301,6 @@ private fun DetailsCard(icon: @Composable () -> Unit, title: String, onClose: ()
             }
             Column(Modifier.padding(end = 12.dp)) { body() }
         }
-    }
-}
-
-@Composable
-private fun IdleLine(st: RouteStop) {
-    if (st.idleSeconds > 0) {
-        Text(
-            "Silnik pracował: ${Fmt.duration(st.idleSeconds)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (st.isIdle) IDLE_COLOR else MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 

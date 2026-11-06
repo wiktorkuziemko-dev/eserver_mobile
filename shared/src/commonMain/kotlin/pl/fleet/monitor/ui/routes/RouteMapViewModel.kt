@@ -24,6 +24,8 @@ import kotlinx.coroutines.delay
 import kotlin.time.Instant
 import kotlin.time.TimeSource
 import pl.fleet.monitor.data.analyzeRoute
+import pl.fleet.monitor.data.analyzeWithHistory
+import kotlin.time.Duration.Companion.hours
 import pl.fleet.monitor.data.now
 import pl.fleet.monitor.ui.Fmt
 import pl.fleet.monitor.ui.history.RangePreset
@@ -144,8 +146,24 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
         _ui.update { it.copy(loading = true, error = null, selectedTrip = null, selectedEvent = null) }
         job = viewModelScope.launch {
             try {
-                val points = repo.routes(serial, start, end)
-                val analysis = withContext(Dispatchers.Default) { analyzeRoute(points) }
+                // 1) Historia (jak w Statystyce tras) wyznacza trasy, postoje, godziny i kilometry.
+                val history = try {
+                    repo.history(serial, start, end, details = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+                // 2) Punkty routes z zapasem: pełne trasy przechodzące przez granice zakresu i ewentualne przesunięcia stref.
+                val trips = history?.entries.orEmpty().filter { it.motion }
+                val rFrom = minOf(start, trips.mapNotNull { it.begin }.minOrNull() ?: start) - ROUTES_MARGIN
+                val rTo = minOf(maxOf(end, trips.mapNotNull { it.end }.maxOrNull() ?: end) + ROUTES_MARGIN, now())
+                val points = repo.routes(serial, rFrom, rTo)
+                val analysis = withContext(Dispatchers.Default) {
+                    history?.let { analyzeWithHistory(points, it) }
+                        // Bez historii: analiza samych punktów z wybranego okresu (zdarzenia S/T albo prędkość).
+                        ?: analyzeRoute(points.filter { it.time >= start && it.time <= end })
+                }
                 playback = RoutePlayback(analysis)
                 _ui.update { it.copy(loading = false, analysis = analysis) }
             } catch (e: CancellationException) {
@@ -225,8 +243,14 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
 
     private fun seek(t: Instant) {
         val s = playback?.sampleAt(t) ?: return
-        val startKm = selectedRange()?.let { playback?.sampleAt(it.first)?.km } ?: s.km
-        _ui.update { it.copy(player = it.player.copy(time = s.time, km = (s.km - startKm).coerceAtLeast(0.0)), sample = s) }
+        val range = selectedRange()
+        val startKm = range?.let { playback?.sampleAt(it.first)?.km } ?: s.km
+        // Dystans z punktów (linia prosta między raportami) skalujemy do kilometrów z historii,
+        // żeby na końcu animacji pokazać dokładnie tyle, ile podaje serwer.
+        val pointsKm = range?.let { r -> playback?.sampleAt(r.second)?.km?.minus(startKm) } ?: 0.0
+        val historyKm = _ui.value.selectedTrip?.let { _ui.value.analysis?.trips?.getOrNull(it)?.km } ?: _ui.value.analysis?.km ?: 0.0
+        val scale = if (pointsKm > 0.05 && historyKm > 0) historyKm / pointsKm else 1.0
+        _ui.update { it.copy(player = it.player.copy(time = s.time, km = ((s.km - startKm) * scale).coerceAtLeast(0.0)), sample = s) }
         // Ze śledzeniem mapa przesuwa się za pojazdem, nie zmieniając przybliżenia ustawionego przez użytkownika.
         mapState.showVehicle(s, follow = _ui.value.player.follow)
     }
@@ -237,3 +261,6 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
 }
 
 private const val FRAME_MS = 40L
+
+/** Zapas zakresu routes (przesunięcia stref, trasy przez północ) – nadmiarowe punkty odpadają przy przypisaniu do historii. */
+private val ROUTES_MARGIN = 3.hours

@@ -52,7 +52,7 @@ class VehicleDetailsViewModel(private val serial: String) : ViewModel() {
             val today = async {
                 result { repo.history(serial, Fmt.today().atStartOfDayIn(Fmt.zone), now(), details = false) }
             }
-            _ui.update { it.copy(status = status.await()) }
+            _ui.update { it.copy(status = withActivityStart(status.await())) }
             _ui.update { it.copy(lastReport = last.await()) }
             _ui.update { it.copy(today = today.await()) }
         }
@@ -67,6 +67,14 @@ class VehicleDetailsViewModel(private val serial: String) : ViewModel() {
     }
 
     fun closeDiagnostics() = _ui.update { it.copy(diagnostics = null) }
+
+    /** Funkcja status nie zawsze podaje początek aktywności – wtedy wyliczamy go z tras (koniec ostatniej trasy). */
+    private suspend fun withActivityStart(s: Loadable<MotionStatus>): Loadable<MotionStatus> {
+        val st = (s as? Loadable.Ready)?.value ?: return s
+        if (st.begin != null) return s
+        val since = runCatching { repo.activitySince(serial, st.motion) }.getOrNull() ?: return s
+        return Loadable.Ready(st.copy(begin = since))
+    }
 
     private suspend fun <T> result(block: suspend () -> T): Loadable<T> = try {
         Loadable.Ready(block())

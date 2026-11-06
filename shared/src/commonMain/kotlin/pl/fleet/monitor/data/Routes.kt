@@ -259,10 +259,12 @@ class RoutePlayback(val analysis: RouteAnalysis) {
         val f = if (b == null || total <= 0 || k in gapIdx) 0.0 else (time - a.time).inWholeMilliseconds.toDouble() / total
         val lat = if (b == null) a.lat else a.lat + (b.lat - a.lat) * f
         val lon = if (b == null) a.lon else a.lon + (b.lon - a.lon) * f
-        val speed = if (b == null) a.speed else a.speed + (b.speed - a.speed) * f
         val km = cumKm[k] + if (b == null) 0.0 else (cumKm[k + 1] - cumKm[k]) * f
         val trip = analysis.trips.indexOfFirst { k >= it.s && k < it.e }.takeIf { it >= 0 }
         val stop = if (trip == null) analysis.stops.indexOfFirst { k >= it.a && k < it.b }.takeIf { it >= 0 } else null
+        // Prędkość z ostatniego raportu (bez uśredniania między raportami – takie wartości podaje nadajnik);
+        // poza trasą (koniec trasy, postój) pojazd stoi.
+        val speed = if (trip == null) 0.0 else a.speed
         return RouteSample(
             time = time, lat = lat, lon = lon, speed = speed,
             bearing = bearings.getOrElse(min(k, bearings.size - 1)) { 0.0 },

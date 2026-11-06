@@ -106,6 +106,7 @@ class FleetViewModel : ViewModel() {
 
     private var refreshJob: Job? = null
     private var previewJob: Job? = null
+    private val activityCache = mutableMapOf<String, Pair<Boolean, Instant?>>()
 
     /** Pobiera stan (jazda/postój od…) i ostatni raport zaznaczonego pojazdu. */
     private fun loadPreview(keepOld: Boolean = false) {
@@ -117,7 +118,15 @@ class FleetViewModel : ViewModel() {
         }
         if (!keepOld || _ui.value.preview?.deviceId != v.deviceId) _ui.update { it.copy(preview = PreviewInfo(v.deviceId)) }
         previewJob = viewModelScope.launch {
-            val status = previewResult { repo.status(v.serial) }
+            val status = previewResult { repo.status(v.serial) }.let { r ->
+                // Bez początku aktywności w odpowiedzi status – wyliczamy go z tras (z pamięcią, by nie pobierać tras co 30 s).
+                val st = (r as? Loadable.Ready)?.value
+                if (st == null || st.begin != null) return@let r
+                val cached = activityCache[v.deviceId]?.takeIf { it.first == st.motion }
+                val since = if (cached != null) cached.second
+                else runCatching { repo.activitySince(v.serial, st.motion) }.getOrNull().also { activityCache[v.deviceId] = st.motion to it }
+                if (since != null) Loadable.Ready(st.copy(begin = since)) else r
+            }
             val last = previewResult { repo.lastReport(v.serial) }
             _ui.update { if (it.selectedId == v.deviceId) it.copy(preview = PreviewInfo(v.deviceId, status, last)) else it }
         }

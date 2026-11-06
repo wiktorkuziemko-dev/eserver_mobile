@@ -121,7 +121,7 @@ class RoutePlaybackTest {
         val pb = RoutePlayback(analyzeRoute(points))
         val s = pb.sampleAt(T0 + 90.seconds)!!
         assertEquals(50.015, s.lat, 1e-9)
-        assertEquals(50.0, s.speed, 1e-9)
+        assertEquals(60.0, s.speed, 1e-9) // prędkość z ostatniego raportu, nie uśredniona
         assertEquals(1.67, s.km, 0.01)
         assertEquals(0.0, s.bearing, 0.5) // na północ
         assertEquals("A", s.address)

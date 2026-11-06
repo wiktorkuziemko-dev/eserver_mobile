@@ -418,8 +418,8 @@ private fun StatusField(v: Vehicle, preview: pl.fleet.monitor.ui.PreviewInfo?, d
     val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
     val stateColor = if (driving) VehicleState.DRIVING.color else VehicleState.PARKED.color
     val bg = if (driving) androidx.compose.ui.graphics.Color(0xFFF1F8F2) else androidx.compose.ui.graphics.Color(0xFFFFF6EA)
-    // Początek jazdy/postoju z API; bez niego na postoju – czas ostatniej pozycji (od kiedy pojazd stoi).
-    val begin = status?.begin ?: v.lastPositionTime.takeIf { !driving }
+    // Początek jazdy/postoju: z funkcji status albo wyliczony z tras; bez niego nie pokazujemy czasu trwania.
+    val begin = status?.begin
     val title = (if (driving) "W ruchu" else "Postój") +
         (begin?.let { " od " + Fmt.duration((pl.fleet.monitor.data.now() - it).inWholeSeconds) } ?: "")
     val report = when (val r = preview?.lastReport) {

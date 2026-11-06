@@ -281,8 +281,6 @@ private fun CurrentActivityCard(
                         if (s.begin != null) {
                             val since = (now() - s.begin).inWholeSeconds
                             Text("od ${Fmt.smartTime(s.begin)} · trwa ${Fmt.duration(since)}", style = MaterialTheme.typography.bodyMedium)
-                        } else {
-                            Text("brak informacji o początku aktywności", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

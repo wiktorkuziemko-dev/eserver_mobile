@@ -435,6 +435,7 @@ private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip?, vm: RouteMapViewModel
             )
             if (s != null) {
                 val info = listOfNotNull(
+                    "postój".takeIf { s.trip == null },
                     s.ignition?.let { if (it) "zapłon wł." else "zapłon wył." },
                     s.fuel?.takeIf { it > 0 }?.let { "paliwo ${Fmt.decimal(it, 1)} l" },
                     shortAddress(s.address).takeIf { it.isNotEmpty() },

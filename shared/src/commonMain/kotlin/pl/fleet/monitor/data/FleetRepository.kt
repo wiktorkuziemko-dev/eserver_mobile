@@ -30,6 +30,21 @@ class FleetRepository(
 
     suspend fun status(serial: String, at: Instant = now()) = api.status(creds(), normalizeSerial(serial), at)
 
+    /**
+     * Początek bieżącej aktywności wyliczony z tras, gdy funkcja status go nie podaje:
+     * na postoju – koniec ostatniej trasy, w jeździe – start trwającej trasy.
+     * Szukamy w ostatniej dobie, potem w 3 i 7 dniach; null, gdy nie da się ustalić.
+     */
+    suspend fun activitySince(serial: String, driving: Boolean): Instant? {
+        val to = now()
+        for (days in listOf(1, 3, 7)) {
+            val a = analyzeRoute(routes(serial, to - days.days, to))
+            val last = a.trips.lastOrNull() ?: continue
+            return if (driving) last.start.takeIf { last.e == a.points.lastIndex } else last.end
+        }
+        return null
+    }
+
     suspend fun routes(serial: String, from: Instant, to: Instant) = api.routes(creds(), normalizeSerial(serial), from, to)
 
     suspend fun lastReport(serial: String) = api.lastReadingDate(creds(), normalizeSerial(serial))

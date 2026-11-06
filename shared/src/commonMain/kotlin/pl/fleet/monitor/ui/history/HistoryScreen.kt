@@ -80,14 +80,14 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
     Scaffold(
         topBar = {
             GradientTopBar(
-                title = "Historia tras",
+                title = "Statystyka tras",
                 subtitle = vehicleLabel,
                 onBack = onBack,
                 actions = {
                     IconButton(
                         enabled = ui.summary?.entries?.isNotEmpty() == true,
                         onClick = {
-                            platform.share("Historia tras $vehicleLabel", vm.csv(vehicleLabel))
+                            platform.share("Statystyka tras $vehicleLabel", vm.csv(vehicleLabel))
                         },
                     ) { Icon(Icons.Outlined.Share, "Eksportuj CSV") }
                 },
@@ -99,7 +99,7 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
                 Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                RangePreset.entries.filter { it != RangePreset.CUSTOM }.forEach { p ->
+                HISTORY_PRESETS.forEach { p ->
                     FilterChip(selected = ui.preset == p, onClick = { vm.selectPreset(p) }, label = { Text(p.label) })
                 }
                 FilterChip(

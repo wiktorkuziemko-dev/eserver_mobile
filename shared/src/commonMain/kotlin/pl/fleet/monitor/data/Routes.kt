@@ -183,3 +183,85 @@ fun analyzeRoute(points: List<RoutePoint>, minStopMinutes: Int = 5, stillKmh: Do
     if (s < n - 1) mkTrips(s, n - 1)
     return RouteAnalysis(p, trips, stops, gaps)
 }
+
+/** Stan pojazdu w danej chwili odtwarzania przejazdu. */
+data class RouteSample(
+    val time: Instant,
+    val lat: Double,
+    val lon: Double,
+    val speed: Double,
+    /** Kierunek jazdy [°], 0 = północ. */
+    val bearing: Double,
+    val ignition: Boolean?,
+    val fuel: Int?,
+    /** Dystans przejechany od początku okresu [km] (bez przerw w danych). */
+    val km: Double,
+    val address: String,
+    /** Indeks bieżącej trasy albo postoju (gdy pojazd stoi). */
+    val trip: Int?,
+    val stop: Int?,
+)
+
+/** Kierunek z punktu a do b [°]. */
+fun bearingDeg(a: RoutePoint, b: RoutePoint): Double {
+    val r = PI / 180
+    val y = sin((b.lon - a.lon) * r) * cos(b.lat * r)
+    val x = cos(a.lat * r) * sin(b.lat * r) - sin(a.lat * r) * cos(b.lat * r) * cos((b.lon - a.lon) * r)
+    return (kotlin.math.atan2(y, x) / r + 360) % 360
+}
+
+/** Odtwarzanie przejazdu: pozycja, prędkość i kierunek interpolowane między punktami. */
+class RoutePlayback(val analysis: RouteAnalysis) {
+    private val p = analysis.points
+    private val gapIdx = analysis.gaps.map { it.index }.toSet()
+
+    /** Dystans narastająco w punktach (przerwy w danych się nie liczą). */
+    private val cumKm = DoubleArray(p.size).also { c ->
+        for (k in 1 until p.size) c[k] = c[k - 1] + if ((k - 1) in gapIdx) 0.0 else dist(p[k - 1], p[k])
+    }
+
+    /** Kierunek dla każdego odcinka: z najbliższego ruchu (> 5 m), żeby strzałka nie wracała na północ na postoju. */
+    private val bearings = DoubleArray(max(0, p.size - 1)).also { b ->
+        var last = 0.0
+        for (k in 0 until p.size - 1) {
+            if (dist(p[k], p[k + 1]) > 0.005) last = bearingDeg(p[k], p[k + 1])
+            b[k] = last
+        }
+    }
+
+    val start: Instant? get() = p.firstOrNull()?.time
+    val end: Instant? get() = p.lastOrNull()?.time
+
+    /** Postój obejmujący chwilę [t] (do pomijania postojów podczas odtwarzania). */
+    fun stopAt(t: Instant): RouteStop? = analysis.stops.firstOrNull { t >= it.start && t < it.end }
+
+    fun sampleAt(t: Instant): RouteSample? {
+        if (p.isEmpty()) return null
+        val time = t.coerceIn(p.first().time, p.last().time)
+        // ostatni punkt z czasem <= t
+        var lo = 0
+        var hi = p.size - 1
+        while (lo < hi) {
+            val mid = (lo + hi + 1) / 2
+            if (p[mid].time <= time) lo = mid else hi = mid - 1
+        }
+        val k = lo
+        val a = p[k]
+        val b = p.getOrNull(k + 1)
+        val total = b?.let { (it.time - a.time).inWholeMilliseconds } ?: 0
+        val f = if (b == null || total <= 0 || k in gapIdx) 0.0 else (time - a.time).inWholeMilliseconds.toDouble() / total
+        val lat = if (b == null) a.lat else a.lat + (b.lat - a.lat) * f
+        val lon = if (b == null) a.lon else a.lon + (b.lon - a.lon) * f
+        val speed = if (b == null) a.speed else a.speed + (b.speed - a.speed) * f
+        val km = cumKm[k] + if (b == null) 0.0 else (cumKm[k + 1] - cumKm[k]) * f
+        val trip = analysis.trips.indexOfFirst { k >= it.s && k < it.e }.takeIf { it >= 0 }
+        val stop = if (trip == null) analysis.stops.indexOfFirst { k >= it.a && k < it.b }.takeIf { it >= 0 } else null
+        return RouteSample(
+            time = time, lat = lat, lon = lon, speed = speed,
+            bearing = bearings.getOrElse(min(k, bearings.size - 1)) { 0.0 },
+            ignition = a.ignition, fuel = a.fuel, km = km,
+            address = a.address.ifEmpty { b?.address.orEmpty() },
+            trip = trip, stop = stop,
+        )
+    }
+}

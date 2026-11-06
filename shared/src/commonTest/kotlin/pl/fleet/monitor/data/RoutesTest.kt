@@ -102,3 +102,23 @@ class RoutesTest {
         assertEquals(listOf(0, 1, 2, 3, 4), listOf(10.0, 45.0, 75.0, 105.0, 130.0).map(::speedBucket))
     }
 }
+
+class RoutePlaybackTest {
+    @Test fun interpolatesPositionSpeedAndDistance() {
+        val points = listOf(
+            pt(0, 50.0, 19.0, 0.0),
+            pt(60, 50.01, 19.0, 60.0, addr = "A"),
+            pt(120, 50.02, 19.0, 40.0, addr = "B"),
+        )
+        val pb = RoutePlayback(analyzeRoute(points))
+        val s = pb.sampleAt(T0 + 90.seconds)!!
+        assertEquals(50.015, s.lat, 1e-9)
+        assertEquals(50.0, s.speed, 1e-9)
+        assertEquals(1.67, s.km, 0.01)
+        assertEquals(0.0, s.bearing, 0.5) // na północ
+        assertEquals("A", s.address)
+        // poza zakresem – przycięte do końców
+        assertEquals(50.02, pb.sampleAt(T0 + 1000.seconds)!!.lat, 1e-9)
+        assertEquals(50.0, pb.sampleAt(T0 - 10.seconds)!!.lat, 1e-9)
+    }
+}

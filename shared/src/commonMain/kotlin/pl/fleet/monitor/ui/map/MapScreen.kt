@@ -332,7 +332,7 @@ private fun VehiclePreviewCard(
                     androidx.compose.ui.graphics.Color(0xFF1A5DBF), Modifier.weight(1f),
                 )
                 ArcGauge(
-                    v.fuelPercent?.toFloat(), 100f, v.fuelPercent?.let { "$it%" }, "paliwo",
+                    v.fuelPercent?.toFloat(), 100f, v.fuelPercent?.let { "${Fmt.decimal(it, 0)}%" }, "paliwo",
                     VehicleState.PARKED.color, Modifier.weight(1f),
                 )
             }

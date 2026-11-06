@@ -24,7 +24,12 @@ import pl.fleet.monitor.ui.Fmt
 /** Maksymalna długość okresu historii (w dniach). */
 const val MAX_DAYS = 14
 
-enum class RangePreset(val label: String) { TODAY("Dziś"), YESTERDAY("Wczoraj"), WEEK("7 dni"), TWO_WEEKS("14 dni"), CUSTOM("Zakres…") }
+enum class RangePreset(val label: String) {
+    TODAY("Dziś"), YESTERDAY("Wczoraj"), DAY_BEFORE("Przedwczoraj"), WEEK("7 dni"), TWO_WEEKS("14 dni"), CUSTOM("Zakres…")
+}
+
+/** Szybkie zakresy na ekranie statystyki (zakres własny ma osobny przycisk). */
+val HISTORY_PRESETS = listOf(RangePreset.TODAY, RangePreset.YESTERDAY, RangePreset.WEEK, RangePreset.TWO_WEEKS)
 
 data class DayGroup(
     val date: LocalDate,
@@ -70,6 +75,7 @@ class HistoryViewModel(private val serial: String) : ViewModel() {
         val (from, to) = when (p) {
             RangePreset.TODAY -> today to today
             RangePreset.YESTERDAY -> today.minus(1, DateTimeUnit.DAY) to today.minus(1, DateTimeUnit.DAY)
+            RangePreset.DAY_BEFORE -> today.minus(2, DateTimeUnit.DAY) to today.minus(2, DateTimeUnit.DAY)
             RangePreset.WEEK -> today.minus(6, DateTimeUnit.DAY) to today
             RangePreset.TWO_WEEKS -> today.minus(MAX_DAYS - 1, DateTimeUnit.DAY) to today
             RangePreset.CUSTOM -> return

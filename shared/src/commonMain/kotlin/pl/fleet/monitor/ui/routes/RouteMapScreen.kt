@@ -20,6 +20,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import pl.fleet.monitor.data.speedBucket
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -98,6 +104,7 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                     analysis = analysis,
                     state = vm.mapState,
                     selectedTrip = ui.selectedTrip,
+                    fitOnSelect = ui.fitOnSelect,
                     onSelectTrip = vm::selectTrip,
                     onSelectStop = vm::selectStop,
                     modifier = Modifier.fillMaxSize(),
@@ -117,15 +124,20 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp)) {
                     val trip = ui.selectedTrip?.let { analysis.trips.getOrNull(it) }
                     val stop = ui.selectedStop?.let { analysis.stops.getOrNull(it) }
+                    val player = ui.player
                     when {
+                        player.active -> PlayerBar(ui, vm)
                         trip != null -> TripCard(
                             trip, ui.selectedTrip!!, analysis.trips.size,
                             onPrev = { vm.stepTrip(-1) }, onNext = { vm.stepTrip(1) }, onClose = { vm.selectTrip(null) },
                         )
                         stop != null -> StopCard(stop, ui.selectedStop!!, onClose = { vm.selectStop(null) })
-                        analysis.trips.isNotEmpty() -> HintPill(
-                            "Dotknij trasy lub znacznika P, aby zobaczyć szczegóły",
-                            onClick = { vm.stepTrip(1) },
+                    }
+                    if (!player.active && analysis.points.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        PlayButton(
+                            if (trip != null) "Odtwórz tę trasę" else "Odtwórz przejazd",
+                            onClick = vm::togglePlay,
                         )
                     }
                 }
@@ -251,19 +263,103 @@ private fun LegendStop(color: Color, label: String) {
     }
 }
 
+private val ACCENT = Color(0xFFF0AD1C)
+private val ON_ACCENT = Color(0xFF1A1400)
+private val INK = Color(0xFF1A2028)
+
 @Composable
-private fun HintPill(text: String, onClick: () -> Unit) {
+private fun PlayButton(text: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(50),
-        color = Color(0xFF1A2028),
+        color = INK,
         contentColor = Color.White,
         shadowElevation = 4.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(text, Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(32.dp).background(ACCENT, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.PlayArrow, null, tint = ON_ACCENT)
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            Text("Dotknij trasy lub P – szczegóły", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+            Spacer(Modifier.width(8.dp))
+        }
     }
 }
+
+/**
+ * Odtwarzacz przejazdu: przycisk odtwórz/pauza, zegar, prędkość, przejechany dystans, stan,
+ * zapłon i paliwo zmieniające się w czasie, suwak przewijania, tempo, pomijanie postojów, śledzenie.
+ */
+@Composable
+private fun PlayerBar(ui: RouteMapUiState, vm: RouteMapViewModel) {
+    val p = ui.player
+    val s = ui.sample
+    val a = ui.analysis ?: return
+    val start = a.points.firstOrNull()?.time ?: return
+    val end = a.points.last().time
+    Card(elevation = CardDefaults.cardElevation(6.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(onClick = vm::togglePlay, shape = CircleShape, color = ACCENT, modifier = Modifier.size(44.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(if (p.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (p.playing) "Pauza" else "Odtwórz", tint = ON_ACCENT)
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(s?.let { hms(it.time) } ?: "—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(s?.let { Fmt.dayHeader(Fmt.local(it.time).date) }.orEmpty(), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${s?.let { Fmt.decimal(it.speed, 0) } ?: "–"} km/h", style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold, color = s?.let { SPEED_COLORS[speedBucket(it.speed)] } ?: Color.Unspecified)
+                    Text(s?.let { Fmt.km(it.km) }.orEmpty(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = vm::closePlayer) { Icon(Icons.Outlined.Close, "Zamknij odtwarzanie") }
+            }
+            Slider(
+                value = p.time?.takeIf { end > start }?.let { ((it - start) / (end - start)).toFloat().coerceIn(0f, 1f) } ?: 0f,
+                onValueChange = vm::seekFraction,
+                modifier = Modifier.padding(end = 8.dp).height(32.dp),
+                colors = SliderDefaults.colors(thumbColor = ACCENT, activeTrackColor = ACCENT),
+            )
+            if (s != null) {
+                val state = when {
+                    s.trip != null -> "Jazda · trasa ${s.trip + 1}"
+                    s.stop != null -> "Postój ${s.stop + 1} · ${Fmt.duration(a.stops[s.stop].seconds)}"
+                    else -> "Postój"
+                }
+                val extras = listOfNotNull(
+                    s.ignition?.let { if (it) "zapłon wł." else "zapłon wył." },
+                    s.fuel?.takeIf { it > 0 }?.let { "paliwo $it%" },
+                ).joinToString(" · ")
+                Text(listOf(state, extras).filter { it.isNotEmpty() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (s.address.isNotEmpty()) {
+                    Text(s.address, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 8.dp))
+                }
+            }
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PLAYER_FACTORS.forEach { f ->
+                    FilterChip(selected = p.factor == f, onClick = { vm.setFactor(f) }, label = { Text("×$f") })
+                }
+                FilterChip(selected = p.skipStops, onClick = vm::toggleSkipStops, label = { Text("Pomijaj postoje") })
+                FilterChip(selected = p.follow, onClick = vm::toggleFollow, label = { Text("Śledź pojazd") })
+            }
+        }
+    }
+}
+
+private fun hms(t: Instant): String = Fmt.local(t).let { "${pad2(it.hour)}:${pad2(it.minute)}:${pad2(it.second)}" }
 
 @Composable
 private fun InfoBubble(title: String, text: String, modifier: Modifier = Modifier, onRetry: (() -> Unit)? = null) {

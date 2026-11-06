@@ -52,6 +52,8 @@ import ovh.plrapps.mapcompose.ui.state.MapState
 import pl.fleet.monitor.data.RouteAnalysis
 import pl.fleet.monitor.data.RoutePoint
 import pl.fleet.monitor.data.RouteStop
+import pl.fleet.monitor.data.RouteSample
+import ovh.plrapps.mapcompose.api.moveMarker
 import pl.fleet.monitor.data.speedBucket
 import pl.fleet.monitor.ui.map.DEFAULT_DENSITY
 import pl.fleet.monitor.ui.map.FULL_SIZE
@@ -119,6 +121,7 @@ class RouteMapState {
         focusTrip = null
         map.removeAllPaths()
         map.removeAllMarkers()
+        vehicleShown = false
         segments.clear()
         val p = a.points
         if (p.isEmpty()) return
@@ -207,6 +210,31 @@ class RouteMapState {
         if (fitToTrip) fit((tr.s..tr.e).map { p[it] }, maxZoom = 16.0, animate = true)
     }
 
+    // ---- Pojazd podczas odtwarzania ----
+
+    private var vehicleShown = false
+    internal var vehicleBearing by mutableStateOf(0f)
+
+    internal fun showVehicle(s: RouteSample, follow: Boolean) {
+        val x = lonToX(s.lon)
+        val y = latToY(s.lat)
+        vehicleBearing = s.bearing.toFloat()
+        if (!vehicleShown) {
+            map.addMarker(VEHICLE_ID, x, y, relativeOffset = Offset(-0.5f, -0.5f), zIndex = 20f, clickable = false) {
+                PlaybackVehicle(vehicleBearing)
+            }
+            vehicleShown = true
+        } else {
+            map.moveMarker(VEHICLE_ID, x, y)
+        }
+        if (follow) scope.launch { map.snapScrollTo(x, y) }
+    }
+
+    internal fun hideVehicle() {
+        if (vehicleShown) map.removeMarker(VEHICLE_ID)
+        vehicleShown = false
+    }
+
     internal fun focusStop(st: RouteStop) {
         scope.launch { map.scrollTo(lonToX(st.lon), latToY(st.lat), max(map.scale, scaleFor(15.0))) }
     }
@@ -232,6 +260,7 @@ class RouteMapState {
 }
 
 private const val MIN_SPAN = 2e-5
+private const val VEHICLE_ID = "veh"
 
 private fun RoutePoint.x() = lonToX(lon)
 private fun RoutePoint.y() = latToY(lat)
@@ -242,6 +271,7 @@ fun RouteMap(
     analysis: RouteAnalysis,
     state: RouteMapState,
     selectedTrip: Int?,
+    fitOnSelect: Boolean,
     onSelectTrip: (Int?) -> Unit,
     onSelectStop: (Int?) -> Unit,
     modifier: Modifier = Modifier,
@@ -264,12 +294,33 @@ fun RouteMap(
         if (state.drawn !== analysis) state.draw(analysis)
     }
     LaunchedEffect(analysis, selectedTrip) {
-        if (state.focusTrip != selectedTrip) state.focus(selectedTrip)
+        if (state.focusTrip != selectedTrip) state.focus(selectedTrip, fitToTrip = fitOnSelect)
     }
 
     Box(modifier) {
         MapUI(Modifier.matchParentSize(), state = state.map)
         OsmAttribution(Modifier.align(Alignment.BottomEnd))
+    }
+}
+
+/** Pojazd podczas odtwarzania: ciemne kółko ze strzałką w kierunku jazdy (jak w analizatorze). */
+@Composable
+private fun PlaybackVehicle(bearing: Float) {
+    androidx.compose.foundation.Canvas(Modifier.size(30.dp).shadow(3.dp, CircleShape)) {
+        val r = size.minDimension / 2
+        drawCircle(Color.White, r)
+        drawCircle(INK, r - 2.dp.toPx())
+        androidx.compose.ui.graphics.drawscope.rotate(bearing) {
+            val u = size.minDimension / 28f
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(14f * u, 6f * u)
+                lineTo(19.5f * u, 19f * u)
+                lineTo(14f * u, 16f * u)
+                lineTo(8.5f * u, 19f * u)
+                close()
+            }
+            drawPath(path, Color(0xFFF0AD1C))
+        }
     }
 }
 

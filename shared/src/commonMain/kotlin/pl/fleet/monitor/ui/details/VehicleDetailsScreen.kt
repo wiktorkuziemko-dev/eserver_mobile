@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.CellTower
 import androidx.compose.material.icons.outlined.Directions
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.LocalParking
 import androidx.compose.material.icons.outlined.Map
@@ -169,14 +170,15 @@ fun VehicleDetailsScreen(
             }
 
             Spacer(Modifier.size(20.dp))
-            GradientButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Outlined.History, null); Spacer(Modifier.width(8.dp)); Text("Historia tras")
+            // Dwa główne przyciski tej samej wysokości: mapa tras i statystyka (tabela z funkcji history).
+            GradientButton(onClick = onRouteMap, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(Icons.Outlined.Route, null, Modifier.size(22.dp)); Spacer(Modifier.width(8.dp)); Text("Trasy na mapie")
             }
             Spacer(Modifier.size(8.dp))
-            OutlinedButton(onClick = onRouteMap, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Outlined.Route, null, Modifier.size(20.dp))
+            OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(Icons.Outlined.BarChart, null, Modifier.size(22.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Trasy na mapie")
+                Text("Statystyka tras")
             }
             Spacer(Modifier.size(8.dp))
             OutlinedButton(

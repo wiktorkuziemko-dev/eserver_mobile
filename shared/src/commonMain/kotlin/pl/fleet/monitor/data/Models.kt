@@ -36,6 +36,10 @@ data class PositionDto(
     val dateTime: DateTimeDto? = null,
     val serial: String? = null,
     val vehicleMileage: Long? = null,
+    /** Poziom paliwa [%] (np. 32.4). */
+    val vehicleFuel: Double? = null,
+    /** Obroty silnika [obr/min]. */
+    val vehicleRPM: Double? = null,
 )
 
 @Serializable
@@ -88,10 +92,10 @@ data class Vehicle(
     val ignition: Ignition,
     val lastPositionTime: Instant?,
     val mileage: Long?,
-    /** Obroty silnika [obr/min] – API jeszcze ich nie udostępnia. */
+    /** Obroty silnika [obr/min]. */
     val rpm: Int? = null,
-    /** Poziom paliwa [%] – API jeszcze go nie udostępnia. */
-    val fuelPercent: Int? = null,
+    /** Poziom paliwa [%]; null, gdy pojazd nie ma czujnika (API podaje wtedy 0). */
+    val fuelPercent: Double? = null,
 ) {
     val hasPosition: Boolean get() = latitude != null && longitude != null
 
@@ -181,4 +185,6 @@ private fun buildVehicle(id: String, name: String?, plate: String?, serial: Stri
     ignition = Ignition.parse(p?.ignitionState),
     lastPositionTime = p?.dateTime?.toInstant(),
     mileage = p?.vehicleMileage,
+    rpm = p?.vehicleRPM?.toInt(),
+    fuelPercent = p?.vehicleFuel?.takeIf { it > 0 },
 )

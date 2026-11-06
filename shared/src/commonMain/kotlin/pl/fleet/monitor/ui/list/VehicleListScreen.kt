@@ -1,5 +1,7 @@
 package pl.fleet.monitor.ui.list
 
+import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.foundation.horizontalScroll
@@ -156,17 +158,14 @@ private fun VehicleRow(
                     )
                 }
                 Spacer(Modifier.size(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
                     if (voltage != null) {
-                        Meta(
-                            Icons.Outlined.BatteryChargingFull, "${Fmt.decimal(voltage, 1)} V",
-                            color = when (voltageOk) {
-                                true -> Color(0xFF2E7D32)
-                                false -> MaterialTheme.colorScheme.error
-                                null -> null
-                            },
-                        )
+                        if (voltageOk == null) {
+                            Meta(Icons.Outlined.BatteryChargingFull, "${Fmt.decimal(voltage, 1)} V")
+                        } else {
+                            BatteryBadge(voltage, voltageOk)
+                        }
                     }
                     Meta(
                         Icons.Outlined.Schedule, Fmt.ago(v.lastPositionTime),
@@ -177,6 +176,25 @@ private fun VehicleRow(
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
+    }
+}
+
+/** Plakietka akumulatora (gdy włączone ostrzeganie): zielona powyżej progu, czerwona z wykrzyknikiem poniżej. */
+@Composable
+private fun BatteryBadge(volts: Double, ok: Boolean) {
+    val bg = if (ok) Color(0xFFE6F4E9) else Color(0xFFFDE2E1)
+    val fg = if (ok) Color(0xFF1B6B2C) else Color(0xFFB3261E)
+    Row(
+        Modifier.background(bg, androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .padding(start = 6.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(if (ok) Icons.Filled.BatteryFull else Icons.Filled.BatteryAlert, null, Modifier.size(14.dp), tint = fg)
+        Spacer(Modifier.width(3.dp))
+        Text(
+            if (ok) "${Fmt.decimal(volts, 1)} V" else "${Fmt.decimal(volts, 1)} V · niski",
+            style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = fg,
+        )
     }
 }
 

@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,10 +77,11 @@ fun ChartsScreen(vehicleName: String, title: String, vm: ChartsViewModel, onBack
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    ChartCard("Prędkość", "km/h", 0, ui.speed, SPEED_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = true)
-                    ChartCard("Obroty silnika", "obr/min", 0, ui.rpm, RPM_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = true)
-                    ChartCard("Napięcie akumulatora", "V", 2, ui.voltage, VOLTAGE_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = false)
-                    ChartCard("Paliwo", "l", 1, ui.fuel, FUEL_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = false)
+                    // Prędkość i obroty: zaznaczone maksimum; napięcie i paliwo: maksimum i minimum.
+                    ChartCard("Prędkość", "km/h", 0, ui.speed, SPEED_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = true, showMin = false)
+                    ChartCard("Obroty silnika", "obr/min", 0, ui.rpm, RPM_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = true, showMin = false)
+                    ChartCard("Napięcie akumulatora", "V", 2, ui.voltage, VOLTAGE_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = false, showMin = true)
+                    ChartCard("Paliwo", "l", 1, ui.fuel, FUEL_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = false, showMin = true)
                     Spacer(Modifier.height(16.dp))
                 }
             }
@@ -98,6 +101,7 @@ private fun ChartCard(
     cursor: Instant?,
     onCursor: (Instant?) -> Unit,
     zeroBased: Boolean,
+    showMin: Boolean,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(1.dp)) {
         Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)) {
@@ -122,6 +126,19 @@ private fun ChartCard(
             }
             val values = series.points.mapNotNull { it.second }
             val (lo, hi) = axisRange(values.min(), values.max(), zeroBased)
+            // Ekstrema: pierwszy punkt z wartością maksymalną / minimalną
+            val maxPt = series.points.filter { it.second != null }.maxBy { it.second!! }
+            val minPt = series.points.filter { it.second != null }.minBy { it.second!! }
+            val marks = buildList {
+                add(Mark(maxPt.first, maxPt.second!!, "▲ ${Fmt.decimal(maxPt.second!!, decimals)}", above = true))
+                if (showMin && minPt.second!! < maxPt.second!!) add(Mark(minPt.first, minPt.second!!, "▼ ${Fmt.decimal(minPt.second!!, decimals)}", above = false))
+            }
+            Text(
+                if (showMin) "min ${Fmt.decimal(minPt.second!!, decimals)} · maks. ${Fmt.decimal(maxPt.second!!, decimals)} $unit"
+                else "maks. ${Fmt.decimal(maxPt.second!!, decimals)} $unit (${hm(maxPt.first)})",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(6.dp))
             Row {
                 // Oś Y: wartość maksymalna, środkowa i minimalna
@@ -131,7 +148,7 @@ private fun ChartCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                LineChart(series, color, from, to, lo, hi, cursor, onCursor, Modifier.weight(1f).height(130.dp))
+                LineChart(series, color, from, to, lo, hi, cursor, onCursor, marks, Modifier.weight(1f).height(130.dp))
             }
             // Oś X: początek, środek i koniec okresu
             Row(Modifier.fillMaxWidth().padding(start = 42.dp, top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -153,9 +170,13 @@ private fun LineChart(
     hi: Double,
     cursor: Instant?,
     onCursor: (Instant?) -> Unit,
+    marks: List<Mark>,
     modifier: Modifier,
 ) {
     val grid = MaterialTheme.colorScheme.outlineVariant
+    val measurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+    val labelBg = MaterialTheme.colorScheme.surface
     val ink = MaterialTheme.colorScheme.onSurface
     val total = (to - from).inWholeMilliseconds.coerceAtLeast(1)
     fun timeAt(x: Float, width: Float): Instant = from + (to - from) * (x / width).coerceIn(0f, 1f).toDouble()
@@ -189,6 +210,22 @@ private fun LineChart(
             prev = t
         }
         drawPath(path, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        // Znaczniki maksimum / minimum z wartością (etykieta nad lub pod punktem, w granicach wykresu)
+        marks.forEach { m ->
+            val mx = x(m.time)
+            val my = y(m.value)
+            drawCircle(Color.White, 6.dp.toPx(), Offset(mx, my))
+            drawCircle(color, 4.dp.toPx(), Offset(mx, my))
+            val layout = measurer.measure(m.label, labelStyle)
+            val lw = layout.size.width.toFloat()
+            val lh = layout.size.height.toFloat()
+            val lx = (mx - lw / 2).coerceIn(0f, (w - lw).coerceAtLeast(0f))
+            val gap = 8.dp.toPx()
+            val ly = if (m.above) (my - gap - lh).let { if (it < 0f) my + gap else it } else (my + gap).let { if (it + lh > h) my - gap - lh else it }
+            drawRoundRect(labelBg.copy(alpha = 0.85f), Offset(lx - 3.dp.toPx(), ly - 1.dp.toPx()),
+                androidx.compose.ui.geometry.Size(lw + 6.dp.toPx(), lh + 2.dp.toPx()), androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
+            drawText(layout, topLeft = Offset(lx, ly))
+        }
         // Kursor: pionowa linia i punkt na serii
         cursor?.let { c ->
             val cx = x(c)
@@ -201,6 +238,9 @@ private fun LineChart(
         }
     }
 }
+
+/** Zaznaczony punkt wykresu (maksimum / minimum) z etykietą. */
+private data class Mark(val time: Instant, val value: Double, val label: String, val above: Boolean)
 
 /** Zakres osi Y z małym marginesem; prędkość i obroty od zera. */
 private fun axisRange(min: Double, max: Double, zeroBased: Boolean): Pair<Double, Double> {

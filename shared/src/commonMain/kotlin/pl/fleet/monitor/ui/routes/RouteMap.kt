@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -310,7 +311,7 @@ private fun PlaybackVehicle(bearing: Float) {
         val r = size.minDimension / 2
         drawCircle(Color.White, r)
         drawCircle(INK, r - 2.dp.toPx())
-        androidx.compose.ui.graphics.drawscope.rotate(bearing) {
+        rotate(bearing) {
             val u = size.minDimension / 28f
             val path = androidx.compose.ui.graphics.Path().apply {
                 moveTo(14f * u, 6f * u)

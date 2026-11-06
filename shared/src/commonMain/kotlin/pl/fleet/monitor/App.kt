@@ -69,6 +69,14 @@ private fun AppNavigation() {
         if (credentials != null && fleetVm.ui.value.vehicles.isEmpty()) fleetVm.refresh()
     }
 
+    // Pojazd edytowany ze szczegółów (okno edycji nad ekranem)
+    var editId by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    editId?.let { id ->
+        fleet.vehicles.firstOrNull { it.deviceId == id }?.let { v ->
+            pl.fleet.monitor.ui.settings.VehicleEditDialog(fleetVm, v, onDismiss = { editId = null })
+        }
+    }
+
     // Tytuł ekranu wykresów (dzień albo trasa) – zapamiętany przy obrocie ekranu.
     var chartsTitle by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
 
@@ -80,6 +88,7 @@ private fun AppNavigation() {
                 fleetVm,
                 onOpenVehicle = { nav.navigate(Routes.vehicle(it)) },
                 onOpenVisibility = { nav.navigate(Routes.VISIBILITY) },
+                onOpenRoutes = { id -> fleet.vehicles.firstOrNull { it.deviceId == id }?.let { nav.navigate(Routes.routes(id, it.serial)) } },
             )
         }
 
@@ -103,6 +112,7 @@ private fun AppNavigation() {
                     onHistory = { nav.navigate(Routes.history(id, vehicle.serial)) },
                     onRouteMap = { nav.navigate(Routes.routes(id, vehicle.serial)) },
                     onRefresh = fleetVm::refresh,
+                    onEdit = { editId = id },
                     onShowOnMap = {
                         fleetVm.showOnMap(id)
                         nav.popBackStack(Routes.MAIN, inclusive = false)

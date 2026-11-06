@@ -143,21 +143,26 @@ fun MapVisibilityScreen(vm: FleetViewModel, onBack: () -> Unit) {
         }
     }
 
-    pickFor?.let { v ->
-        EditVehicleDialog(
-            vehicleName = v.displayName.ifBlank { v.label },
-            currentIcon = ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
-            currentLabel = ui.customLabels[v.deviceId].orEmpty(),
-            currentThreshold = ui.batteryThreshold(v),
-            currentVoltage = ui.voltages[v.deviceId]?.volts,
-            onSave = { icon, label, threshold ->
-                vm.setAppearance(v.deviceId, icon, label)
-                vm.setBatteryThreshold(v.deviceId, threshold)
-                pickFor = null
-            },
-            onDismiss = { pickFor = null },
-        )
-    }
+    pickFor?.let { v -> VehicleEditDialog(vm, v, onDismiss = { pickFor = null }) }
+}
+
+/** Edycja pojazdu (nazwa własna, ikona, próg akumulatora) – z ustawień i ze szczegółów pojazdu. */
+@Composable
+fun VehicleEditDialog(vm: pl.fleet.monitor.ui.FleetViewModel, v: pl.fleet.monitor.data.Vehicle, onDismiss: () -> Unit) {
+    val ui by vm.ui.collectAsStateWithLifecycle()
+    EditVehicleDialog(
+        vehicleName = v.displayName.ifBlank { v.label },
+        currentIcon = ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
+        currentLabel = ui.customLabels[v.deviceId].orEmpty(),
+        currentThreshold = ui.batteryThreshold(v),
+        currentVoltage = ui.voltages[v.deviceId]?.volts,
+        onSave = { icon, label, threshold ->
+            vm.setAppearance(v.deviceId, icon, label)
+            vm.setBatteryThreshold(v.deviceId, threshold)
+            onDismiss()
+        },
+        onDismiss = onDismiss,
+    )
 }
 
 /** Edycja wyglądu pojazdu na mapie: własny opis i ikona. */

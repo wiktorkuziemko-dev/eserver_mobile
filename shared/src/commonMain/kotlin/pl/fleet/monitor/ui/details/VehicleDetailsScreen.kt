@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.LocalParking
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
@@ -91,6 +92,7 @@ fun VehicleDetailsScreen(
     onRouteMap: () -> Unit,
     onRefresh: () -> Unit,
     onShowOnMap: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val platform = rememberPlatformActions()
@@ -103,6 +105,7 @@ fun VehicleDetailsScreen(
                 subtitle = pl.fleet.monitor.ui.vehicleInfo(vehicle).ifEmpty { null },
                 onBack = onBack,
                 actions = {
+                    IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, "Edytuj pojazd") }
                     IconButton(onClick = { onRefresh(); vm.load() }) { Icon(Icons.Outlined.Refresh, "Odśwież") }
                 },
             )

@@ -73,7 +73,13 @@ import pl.fleet.monitor.ui.label
 import pl.fleet.monitor.ui.shortLabel
 
 @Composable
-fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> Unit, modifier: Modifier = Modifier) {
+fun MapScreen(
+    vm: FleetViewModel,
+    ui: FleetUiState,
+    onOpenVehicle: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onOpenRoutes: (String) -> Unit = {},
+) {
     val visible = ui.mapVehicles
     // Mapa ma być stale widoczna (np. w trybie śledzenia) – bez wygaszania ekranu.
     pl.fleet.monitor.platform.KeepScreenOn(ui.keepScreenOn)
@@ -196,6 +202,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                     onFollow = { vm.follow(v.deviceId) },
                     onClose = { vm.select(null) },
                     onDetails = { onOpenVehicle(v.deviceId) },
+                    onRoutes = { onOpenRoutes(v.deviceId) },
                 )
             }
         }
@@ -306,6 +313,7 @@ private fun VehiclePreviewCard(
     onFollow: () -> Unit,
     onClose: () -> Unit,
     onDetails: () -> Unit,
+    onRoutes: () -> Unit,
 ) {
     // Tryb śledzenia: delikatna niebieska ramka i jasnoniebieskie tło kafelka.
     Card(
@@ -350,6 +358,7 @@ private fun VehiclePreviewCard(
                     androidx.compose.material3.FilledTonalButton(
                         onClick = onFollow,
                         modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
                         colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                             containerColor = androidx.compose.ui.graphics.Color(0xFFDCE8FB),
                             contentColor = androidx.compose.ui.graphics.Color(0xFF1A3E78),
@@ -360,15 +369,30 @@ private fun VehiclePreviewCard(
                         Text("Śledzisz", maxLines = 1)
                     }
                 } else {
-                    androidx.compose.material3.OutlinedButton(onClick = onFollow, enabled = v.hasPosition, modifier = Modifier.weight(1f)) {
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onFollow, enabled = v.hasPosition, modifier = Modifier.weight(1f),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                    ) {
                         Icon(Icons.Outlined.GpsNotFixed, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Śledź", maxLines = 1)
                     }
                 }
-                Button(onClick = onDetails, modifier = Modifier.weight(1.4f)) {
+                // Trasy na mapie – bez przechodzenia przez szczegóły
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onRoutes, enabled = v.serial.isNotBlank(), modifier = Modifier.weight(1f),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                ) {
+                    Icon(Icons.Outlined.Route, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Trasy", maxLines = 1)
+                }
+                Button(
+                    onClick = onDetails, modifier = Modifier.weight(1.2f),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                ) {
                     Text("Szczegóły", maxLines = 1)
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(4.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
                 }
             }

@@ -26,6 +26,10 @@ import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material3.Switch
+import androidx.compose.ui.draw.scale
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.vector.ImageVector
 import pl.fleet.monitor.data.RoutePause
 import androidx.compose.material.icons.outlined.Route
@@ -82,6 +86,12 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
     val ui by vm.ui.collectAsStateWithLifecycle()
     var showPicker by remember { mutableStateOf(false) }
     var showTrips by remember { mutableStateOf(false) }
+    // Położenie mapy, dolnej krawędzi legendy i górnej krawędzi panelu animacji (px, względem ekranu) –
+    // do ustawienia śledzonego pojazdu na środku widocznej części mapy.
+    var mapTop by remember { mutableStateOf(0f) }
+    var mapHeight by remember { mutableStateOf(0f) }
+    var legendBottom by remember { mutableStateOf<Float?>(null) }
+    var panelTop by remember { mutableStateOf<Float?>(null) }
 
     Scaffold(
         topBar = { GradientTopBar(title = "Trasy na mapie", subtitle = vehicleLabel, onBack = onBack) },
@@ -119,7 +129,10 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
             }
             if (ui.loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp)) else Spacer(Modifier.height(8.dp))
 
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            Box(Modifier.weight(1f).fillMaxWidth().onGloballyPositioned {
+                mapTop = it.positionInRoot().y
+                mapHeight = it.size.height.toFloat()
+            }) {
                 val analysis = ui.analysis ?: RouteAnalysis.EMPTY
                 RouteMap(
                     analysis = analysis,
@@ -130,7 +143,11 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                     onSelectEvent = vm::selectEvent,
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (vm.showLegend) Legend(Modifier.align(Alignment.TopEnd).padding(10.dp))
+                if (vm.showLegend) {
+                    Legend(Modifier.align(Alignment.TopEnd).padding(10.dp).onGloballyPositioned {
+                        legendBottom = it.positionInRoot().y + it.size.height
+                    })
+                }
 
                 val error = ui.error
                 when {
@@ -148,7 +165,7 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                     val player = ui.player
                     when {
                         event != null -> EventCard(analysis, event, vm.mapState.pauses, onClose = { vm.selectEvent(null) })
-                        player.active -> PlayerBar(ui, trip, vm)
+                        player.active -> PlayerBar(ui, trip, vm, Modifier.onGloballyPositioned { panelTop = it.positionInRoot().y })
                         trip != null -> {
                             TripCard(
                                 trip, ui.selectedTrip!!, analysis.trips.size,
@@ -163,6 +180,17 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                     }
                 }
             }
+        }
+    }
+
+    // Środek widocznej części mapy: między legendą (albo górą mapy) a panelem animacji (albo dołem mapy).
+    val active = ui.player.active
+    val legendShown = vm.showLegend
+    SideEffect {
+        if (mapHeight > 0f) {
+            val top = legendBottom?.takeIf { legendShown } ?: mapTop
+            val bottom = panelTop?.takeIf { active } ?: (mapTop + mapHeight)
+            vm.mapState.followAnchorY = (((top + bottom) / 2 - mapTop) / mapHeight).coerceIn(0.1f, 0.9f)
         }
     }
 
@@ -362,7 +390,7 @@ private fun PlayButton(text: String, onClick: () -> Unit) {
 
 /** Odtwarzacz wybranej trasy: zegar, prędkość, dystans, zapłon, paliwo i adres zmieniające się w czasie. */
 @Composable
-private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip?, vm: RouteMapViewModel) {
+private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip?, vm: RouteMapViewModel, modifier: Modifier = Modifier) {
     val p = ui.player
     val s = ui.sample
     val a = ui.analysis ?: return
@@ -371,17 +399,18 @@ private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip?, vm: RouteMapViewModel
     val start = tr?.start ?: a.points.firstOrNull()?.time ?: return
     val end = tr?.end ?: a.points.last().time
     val totalKm = tr?.km ?: a.km
-    Card(elevation = CardDefaults.cardElevation(6.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 10.dp)) {
+    // Kompaktowy panel: zegar i prędkość, suwak, jedna linia informacji, tempo i śledzenie w jednym wierszu.
+    Card(modifier, elevation = CardDefaults.cardElevation(6.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(start = 10.dp, end = 2.dp, top = 6.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(onClick = vm::togglePlay, shape = CircleShape, color = ACCENT, modifier = Modifier.size(44.dp)) {
+                Surface(onClick = vm::togglePlay, shape = CircleShape, color = ACCENT, modifier = Modifier.size(38.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(if (p.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (p.playing) "Pauza" else "Odtwórz", tint = ON_ACCENT)
                     }
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(s?.let { hms(it.time) } ?: "—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(s?.let { hms(it.time) } ?: "—", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
                         if (tr != null) "Trasa ${index + 1} · ${Fmt.dateTime(tr.start)} – ${hm(tr.end)}"
                         else "Cały zakres · ${s?.trip?.let { "trasa ${it + 1}" } ?: "postój"}",
@@ -389,60 +418,57 @@ private fun PlayerBar(ui: RouteMapUiState, tr: RouteTrip?, vm: RouteMapViewModel
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("${s?.let { Fmt.decimal(it.speed, 0) } ?: "–"} km/h", style = MaterialTheme.typography.titleLarge,
+                    Text("${s?.let { Fmt.decimal(it.speed, 0) } ?: "–"} km/h", style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold, color = s?.let { SPEED_COLORS[speedBucket(it.speed)] } ?: Color.Unspecified)
-                    // Dystans od początku tej trasy
+                    // Dystans od początku animowanego zakresu
                     Text(if (s != null) "${Fmt.km(p.km)} z ${Fmt.km(totalKm)}" else "", style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = vm::closePlayer) { Icon(Icons.Outlined.Close, "Zamknij odtwarzanie") }
+                IconButton(onClick = vm::closePlayer, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Close, "Zamknij odtwarzanie") }
             }
             val total = (end - start).inWholeMilliseconds
             Slider(
                 value = p.time?.takeIf { total > 0 }?.let { ((it - start).inWholeMilliseconds.toFloat() / total).coerceIn(0f, 1f) } ?: 0f,
                 onValueChange = vm::seekFraction,
-                modifier = Modifier.padding(end = 8.dp).height(32.dp),
+                modifier = Modifier.padding(end = 8.dp).height(24.dp),
                 colors = SliderDefaults.colors(thumbColor = ACCENT, activeTrackColor = ACCENT),
             )
             if (s != null) {
-                val extras = listOfNotNull(
+                val info = listOfNotNull(
                     s.ignition?.let { if (it) "zapłon wł." else "zapłon wył." },
                     s.fuel?.takeIf { it > 0 }?.let { "paliwo ${Fmt.decimal(it, 1)} l" },
+                    shortAddress(s.address).takeIf { it.isNotEmpty() },
                 ).joinToString(" · ")
-                if (extras.isNotEmpty()) Text(extras, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                if (s.address.isNotEmpty()) {
-                    Text(s.address, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                if (info.isNotEmpty()) {
+                    Text(info, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 8.dp))
                 }
             }
-            // Tempo: wolno / szybko / ultra
-            Row(Modifier.padding(top = 6.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Tempo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(10.dp))
-                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+            // Tempo (wolno / szybko / ultra) i śledzenie pojazdu w jednym wierszu
+            Row(Modifier.padding(top = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                SingleChoiceSegmentedButtonRow(Modifier.weight(1f).height(34.dp)) {
                     PlaybackSpeed.entries.forEachIndexed { i, sp ->
                         SegmentedButton(
                             selected = p.speed == sp,
                             onClick = { vm.setSpeed(sp) },
                             shape = SegmentedButtonDefaults.itemShape(i, PlaybackSpeed.entries.size),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
                             icon = {},
                             label = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(sp.icon(), null, Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(sp.label, maxLines = 1)
+                                    Icon(sp.icon(), null, Modifier.size(14.dp))
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(sp.label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
                                 }
                             },
                         )
                     }
                 }
-            }
-            // Śledzenie: mapa przesuwa się za pojazdem przy dowolnym przybliżeniu ustawionym przez użytkownika.
-            Row(Modifier.padding(top = 4.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.MyLocation, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(8.dp))
-                Text("Śledź pojazd", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                Switch(checked = p.follow, onCheckedChange = { vm.toggleFollow() })
+                // Śledzenie: mapa przesuwa się za pojazdem przy dowolnym przybliżeniu ustawionym przez użytkownika.
+                Icon(Icons.Outlined.MyLocation, "Śledź pojazd", Modifier.size(18.dp),
+                    tint = if (p.follow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                Switch(checked = p.follow, onCheckedChange = { vm.toggleFollow() }, modifier = Modifier.scale(0.8f))
             }
         }
     }
@@ -563,6 +589,14 @@ private fun TripRow(title: String, subtitle: String, selected: Boolean, onClick:
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Ikona trasy – w tym samym rozmiarze co znacznik postoju P
+        Box(
+            Modifier.padding(start = 2.dp).size(22.dp).background(START_COLOR, RoundedCornerShape(4.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Route, null, Modifier.size(15.dp), tint = Color.White)
+        }
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -62,6 +62,14 @@ class RoutesTest {
         assertTrue(!points[0].speed.isNaN()) // brakująca prędkość wyliczona z pozycji
     }
 
+    @Test fun routeTimesAreUtcRegardlessOfLocalZone() = runTest {
+        ApiDates.zone = TimeZone.of("Europe/Warsaw")
+        val body = """{"result":"OK","data":[{"date":"2026-11-01 10:05:03","speed":0,"pos_h":50.3,"pos_v":18.8}]}"""
+        val api = EServerApi("https://test.local/api/", HttpClient(MockEngine { respond(body) }))
+        val p = api.routes(Credentials.fromPlain("jan", "x"), "36110001", T0, T0)
+        assertEquals(LocalDateTime(2026, 11, 1, 10, 5, 3).toInstant(TimeZone.UTC), p.single().time)
+    }
+
     @Test fun splitsIntoStopsAndTrips() {
         val points = buildList {
             // postój 10 min w punkcie A (zapłon wyłączony)

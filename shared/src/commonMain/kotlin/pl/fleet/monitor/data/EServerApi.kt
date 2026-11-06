@@ -21,6 +21,7 @@ import kotlinx.serialization.json.jsonObject
 import okio.ByteString.Companion.encodeUtf8
 import kotlin.io.encoding.Base64
 import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
 
 /**
  * Klient HTTP dla platformy: na Androidzie silnik OkHttp z wymuszonym TLS 1.2+,
@@ -147,7 +148,8 @@ class EServerApi(
         }
         val raw = items.mapNotNull { item ->
             val o = item as? JsonObject ?: return@mapNotNull null
-            val time = ApiDates.parse(o["date"]) ?: return@mapNotNull null
+            // Funkcja routes – inaczej niż pozostałe – podaje czas raportów w UTC (niezależnie od date_format).
+            val time = ApiDates.parse(o["date"], TimeZone.UTC) ?: return@mapNotNull null
             val lat = o["pos_h"].asDouble() ?: return@mapNotNull null
             val lon = o["pos_v"].asDouble() ?: return@mapNotNull null
             RoutePoint(

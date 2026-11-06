@@ -233,6 +233,9 @@ class RouteMapState {
     // ---- Pojazd podczas odtwarzania ----
 
     private var vehicleShown = false
+
+    /** Pionowe położenie śledzonego pojazdu (0–1 wysokości mapy) – środek obszaru nie zasłoniętego panelami. */
+    internal var followAnchorY = 0.5f
     internal var vehicleBearing by mutableStateOf(0f)
 
     internal fun showVehicle(s: RouteSample, follow: Boolean) {
@@ -247,7 +250,7 @@ class RouteMapState {
         } else {
             map.moveMarker(VEHICLE_ID, x, y)
         }
-        if (follow) scope.launch { map.snapScrollTo(x, y) }
+        if (follow) scope.launch { map.snapScrollTo(x, y, Offset(-0.5f, -followAnchorY)) }
     }
 
     internal fun hideVehicle() {

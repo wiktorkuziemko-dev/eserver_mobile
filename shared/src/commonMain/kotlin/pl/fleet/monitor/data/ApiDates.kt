@@ -36,7 +36,7 @@ object ApiDates {
         "${l.year}-${pad2(l.month.number)}-${pad2(l.day)} ${pad2(l.hour)}:${pad2(l.minute)}:${pad2(l.second)}"
 
     /** Przyjmuje timestamp (sekundy lub milisekundy), "yyyy-MM-dd HH:mm[:ss]", ISO-8601 lub samą datę. */
-    fun parse(raw: String?): Instant? {
+    fun parse(raw: String?, zone: TimeZone = this.zone): Instant? {
         val s = raw?.trim().orEmpty()
         if (s.isEmpty() || s == "null") return null
         s.toLongOrNull()?.let { n ->
@@ -47,8 +47,8 @@ object ApiDates {
             ?: runCatching { LocalDate.parse(s).atStartOfDayIn(zone) }.getOrNull()
     }
 
-    fun parse(element: JsonElement?): Instant? =
-        (element as? JsonPrimitive)?.contentOrNull?.let(::parse)
+    fun parse(element: JsonElement?, zone: TimeZone = this.zone): Instant? =
+        (element as? JsonPrimitive)?.contentOrNull?.let { parse(it, zone) }
 }
 
 internal fun pad2(n: Int): String = n.toString().padStart(2, '0')

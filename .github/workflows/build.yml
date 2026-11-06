@@ -110,7 +110,9 @@ jobs:
 
   testflight:
     needs: ios
-    if: github.ref == 'refs/heads/main'
+    # Commit z „[bez testflight]” w opisie nie trafia do TestFlight; wersję wysyła się wtedy ręcznie
+    # (Actions → Build → Run workflow na gałęzi main).
+    if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[bez testflight]')
     runs-on: macos-latest
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

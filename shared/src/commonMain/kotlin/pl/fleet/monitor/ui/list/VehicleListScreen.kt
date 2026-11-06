@@ -1,5 +1,7 @@
 package pl.fleet.monitor.ui.list
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -99,7 +101,13 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
                         }
                     }
                     items(ui.filtered, key = { it.deviceId }) { v ->
-                        VehicleRow(v, ui.nameOf(v), ui.infoOf(v), ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT, onClick = { onOpenVehicle(v.deviceId) })
+                        VehicleRow(
+                            v, ui.nameOf(v), ui.infoOf(v), ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
+                            voltage = ui.voltages[v.deviceId]?.volts,
+                            // Kolor tylko z włączonym „Informuj o niskim stanie akumulatora”
+                            voltageOk = if (ui.batteryAlerts) ui.voltages[v.deviceId]?.let { it.volts >= ui.batteryThreshold(v) } else null,
+                            onClick = { onOpenVehicle(v.deviceId) },
+                        )
                     }
                 }
             }
@@ -108,7 +116,15 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
 }
 
 @Composable
-private fun VehicleRow(v: Vehicle, name: String, info: String, icon: VehicleIcon, onClick: () -> Unit) {
+private fun VehicleRow(
+    v: Vehicle,
+    name: String,
+    info: String,
+    icon: VehicleIcon,
+    voltage: Double?,
+    voltageOk: Boolean?,
+    onClick: () -> Unit,
+) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -142,6 +158,16 @@ private fun VehicleRow(v: Vehicle, name: String, info: String, icon: VehicleIcon
                 Spacer(Modifier.size(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
+                    if (voltage != null) {
+                        Meta(
+                            Icons.Outlined.BatteryChargingFull, "${Fmt.decimal(voltage, 1)} V",
+                            color = when (voltageOk) {
+                                true -> Color(0xFF2E7D32)
+                                false -> MaterialTheme.colorScheme.error
+                                null -> null
+                            },
+                        )
+                    }
                     Meta(
                         Icons.Outlined.Schedule, Fmt.ago(v.lastPositionTime),
                         warn = Fmt.isStale(v.lastPositionTime),
@@ -155,8 +181,8 @@ private fun VehicleRow(v: Vehicle, name: String, info: String, icon: VehicleIcon
 }
 
 @Composable
-private fun Meta(icon: ImageVector, text: String, warn: Boolean = false) {
-    val color = if (warn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+private fun Meta(icon: ImageVector, text: String, warn: Boolean = false, color: Color? = null) {
+    val color = color ?: if (warn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, Modifier.size(14.dp), tint = color)
         Spacer(Modifier.width(4.dp))

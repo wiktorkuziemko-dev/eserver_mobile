@@ -50,6 +50,16 @@ class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
         get() = prefs.getBoolean(KEY_KEEP_SCREEN_ON, true)
         set(value) = prefs.putBoolean(KEY_KEEP_SCREEN_ON, value)
 
+    /** Kolorowanie napięcia akumulatora na liście pojazdów (zielone / czerwone względem progu). */
+    var batteryAlerts: Boolean
+        get() = prefs.getBoolean(KEY_BATTERY_ALERTS, false)
+        set(value) = prefs.putBoolean(KEY_BATTERY_ALERTS, value)
+
+    /** Krytyczny próg napięcia akumulatora dla pojazdów: deviceId → V (domyślnie [DEFAULT_BATTERY_THRESHOLD]). */
+    var batteryThresholds: Map<String, Double>
+        get() = readMap(KEY_BATTERY_THRESHOLDS).mapNotNull { (k, v) -> v.toDoubleOrNull()?.let { k to it } }.toMap()
+        set(value) = writeMap(KEY_BATTERY_THRESHOLDS, value.mapValues { it.value.toString() })
+
     /** Legenda (kolory prędkości, postoje) na ekranie „Trasy na mapie”. */
     var showRouteLegend: Boolean
         get() = prefs.getBoolean(KEY_ROUTE_LEGEND, true)
@@ -131,6 +141,11 @@ class SessionStore(private val prefs: Settings, secureSettings: Settings?) {
         const val KEY_MARKER_SCALE = "marker_scale"
         const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         const val KEY_ROUTE_LEGEND = "route_legend"
+        const val KEY_BATTERY_ALERTS = "battery_alerts"
+        const val KEY_BATTERY_THRESHOLDS = "battery_thresholds_v2"
+        const val DEFAULT_BATTERY_THRESHOLD = 12.4
+        const val MIN_BATTERY_THRESHOLD = 10.0
+        const val MAX_BATTERY_THRESHOLD = 28.0
         const val MIN_MARKER_SCALE = 0.7f
         const val MAX_MARKER_SCALE = 1.5f
         // Wersja 2: tekst zamiast zbiorów SharedPreferences (Android migruje stare wartości przy starcie).

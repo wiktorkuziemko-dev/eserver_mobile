@@ -1,5 +1,9 @@
 package pl.fleet.monitor.ui.history
 
+import kotlinx.datetime.plus
+import kotlinx.datetime.DateTimeUnit
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -72,7 +76,13 @@ private val ColKm = 64.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit) {
+fun HistoryScreen(
+    vehicleLabel: String,
+    vm: HistoryViewModel,
+    onBack: () -> Unit,
+    /** Wykresy dla okresu (od, do, tytuł) – całego dnia albo jednej trasy. */
+    onCharts: (Instant, Instant, String) -> Unit,
+) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val platform = rememberPlatformActions()
     var showPicker by remember { mutableStateOf(false) }
@@ -124,7 +134,7 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
             val error = ui.error
             when {
                 error != null -> ErrorState(error, onRetry = vm::load)
-                ui.summary != null -> HistoryContent(ui)
+                ui.summary != null -> HistoryContent(ui, onCharts)
             }
         }
     }
@@ -138,7 +148,7 @@ fun HistoryScreen(vehicleLabel: String, vm: HistoryViewModel, onBack: () -> Unit
 }
 
 @Composable
-private fun HistoryContent(ui: HistoryUiState) {
+private fun HistoryContent(ui: HistoryUiState, onCharts: (Instant, Instant, String) -> Unit) {
     val summary = ui.summary ?: return
     val days = ui.days
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
@@ -166,15 +176,25 @@ private fun HistoryContent(ui: HistoryUiState) {
             }
         }
         days.forEach { day ->
-            item(key = "h-${day.date}") { DayHeader(day) }
+            item(key = "h-${day.date}") {
+                DayHeader(day, onCharts = {
+                    val start = day.date.atStartOfDayIn(Fmt.zone)
+                    val end = minOf(day.date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(Fmt.zone), pl.fleet.monitor.data.now())
+                    onCharts(start, end, "Wykresy · ${Fmt.date(day.date)}")
+                })
+            }
             item(key = "c-${day.date}") { ColumnsHeader() }
-            itemsIndexed(day.entries, key = { i, _ -> "${day.date}-$i" }) { _, e -> EntryRow(e, day.date) }
+            itemsIndexed(day.entries, key = { i, _ -> "${day.date}-$i" }) { _, e ->
+                EntryRow(e, day.date, onCharts = if (e.motion && e.begin != null && e.end != null) {
+                    { onCharts(e.begin, e.end, "Wykresy trasy · ${Fmt.date(Fmt.local(e.begin).date)}") }
+                } else null)
+            }
         }
     }
 }
 
 @Composable
-private fun DayHeader(day: DayGroup) {
+private fun DayHeader(day: DayGroup, onCharts: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surface)))
@@ -191,6 +211,10 @@ private fun DayHeader(day: DayGroup) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
+        // Wykresy całego dnia
+        IconButton(onClick = onCharts, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.AutoMirrored.Outlined.ShowChart, "Wykresy dnia", tint = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 
@@ -209,10 +233,16 @@ private fun ColumnsHeader() {
 }
 
 @Composable
-private fun EntryRow(e: HistoryEntry, day: LocalDate) {
+private fun EntryRow(e: HistoryEntry, day: LocalDate, onCharts: (() -> Unit)?) {
     val tint = if (e.motion) VehicleState.DRIVING.color else VehicleState.PARKED.color
     Column {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Trasa: dotknięcie otwiera wykresy tej trasy
+        Row(
+            Modifier.fillMaxWidth()
+                .then(if (onCharts != null) Modifier.clickable(onClick = onCharts) else Modifier)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Box(Modifier.width(ColType)) {
                 Icon(if (e.motion) Icons.Outlined.Route else Icons.Outlined.LocalParking, if (e.motion) "Jazda" else "Postój",
                     Modifier.size(18.dp), tint = tint)
@@ -227,6 +257,9 @@ private fun EntryRow(e: HistoryEntry, day: LocalDate) {
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.End,
             )
+            Box(Modifier.width(22.dp), contentAlignment = Alignment.CenterEnd) {
+                if (onCharts != null) Icon(Icons.AutoMirrored.Outlined.ShowChart, "Wykresy trasy", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     }

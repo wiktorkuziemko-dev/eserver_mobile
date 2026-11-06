@@ -6,6 +6,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
@@ -35,6 +36,19 @@ class FleetRepository(
      * na postoju – koniec ostatniej trasy, w jeździe – start trwającej trasy.
      * Szukamy w ostatniej dobie, potem w 3 i 7 dniach; null, gdy nie da się ustalić.
      */
+    /**
+     * Ostatni odczyt napięcia akumulatora: najpierw z ostatnich 2 h (pojazd w ruchu raportuje często),
+     * potem z ostatniej doby (na postoju nadajnik raportuje rzadko). null – brak odczytu.
+     */
+    suspend fun latestVoltage(serial: String): VoltageReading? {
+        val to = now()
+        for (hours in listOf(2, 24)) {
+            routes(serial, to - hours.hours, to).lastOrNull { it.voltage != null && it.voltage > 0 }
+                ?.let { return VoltageReading(it.voltage!!, it.time) }
+        }
+        return null
+    }
+
     suspend fun activitySince(serial: String, driving: Boolean): Instant? {
         val to = now()
         for (days in listOf(1, 3, 7)) {

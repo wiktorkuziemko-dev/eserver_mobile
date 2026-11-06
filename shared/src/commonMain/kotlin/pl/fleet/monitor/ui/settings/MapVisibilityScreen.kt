@@ -1,5 +1,6 @@
 package pl.fleet.monitor.ui.settings
 
+import pl.fleet.monitor.data.SessionStore
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -147,7 +148,13 @@ fun MapVisibilityScreen(vm: FleetViewModel, onBack: () -> Unit) {
             vehicleName = v.displayName.ifBlank { v.label },
             currentIcon = ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
             currentLabel = ui.customLabels[v.deviceId].orEmpty(),
-            onSave = { icon, label -> vm.setAppearance(v.deviceId, icon, label); pickFor = null },
+            currentThreshold = ui.batteryThreshold(v),
+            currentVoltage = ui.voltages[v.deviceId]?.volts,
+            onSave = { icon, label, threshold ->
+                vm.setAppearance(v.deviceId, icon, label)
+                vm.setBatteryThreshold(v.deviceId, threshold)
+                pickFor = null
+            },
             onDismiss = { pickFor = null },
         )
     }
@@ -159,11 +166,14 @@ private fun EditVehicleDialog(
     vehicleName: String,
     currentIcon: VehicleIcon,
     currentLabel: String,
-    onSave: (VehicleIcon, String) -> Unit,
+    currentThreshold: Double,
+    currentVoltage: Double?,
+    onSave: (VehicleIcon, String, Double) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var icon by remember { mutableStateOf(currentIcon) }
     var label by remember { mutableStateOf(currentLabel) }
+    var threshold by remember { mutableStateOf(currentThreshold.toFloat()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -182,6 +192,25 @@ private fun EditVehicleDialog(
                     supportingText = { Text("Używana wszędzie w aplikacji. Puste pole = nazwa z systemu.") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                )
+                // Krytyczny próg napięcia akumulatora (instalacje 12 V i 24 V)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Próg napięcia akumulatora", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f))
+                    Text("${pl.fleet.monitor.ui.Fmt.decimal(threshold.toDouble(), 1)} V", style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+                androidx.compose.material3.Slider(
+                    value = threshold,
+                    onValueChange = { threshold = (kotlin.math.round(it * 10) / 10f) },
+                    valueRange = SessionStore.MIN_BATTERY_THRESHOLD.toFloat()..SessionStore.MAX_BATTERY_THRESHOLD.toFloat(),
+                )
+                Text(
+                    buildString {
+                        append("Poniżej progu napięcie jest oznaczane na czerwono (domyślnie 12,4 V).")
+                        currentVoltage?.let { append(" Ostatni odczyt: ${pl.fleet.monitor.ui.Fmt.decimal(it, 1)} V.") }
+                    },
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text("Ikona", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 VehicleIcon.entries.chunked(3).forEach { row ->
@@ -215,7 +244,7 @@ private fun EditVehicleDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(icon, label) }) { Text("Zapisz") } },
+        confirmButton = { TextButton(onClick = { onSave(icon, label, kotlin.math.round(threshold * 10) / 10.0) }) { Text("Zapisz") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
     )
 }

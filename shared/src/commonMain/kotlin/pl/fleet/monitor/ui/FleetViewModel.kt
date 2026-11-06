@@ -40,6 +40,11 @@ data class FleetUiState(
     val markerScale: Float = 1f,
     val keepScreenOn: Boolean = true,
     val showRouteLegend: Boolean = true,
+    /** Ostatnie napięcie akumulatora pojazdów (deviceId → odczyt). */
+    val voltages: Map<String, pl.fleet.monitor.data.VoltageReading> = emptyMap(),
+    /** Własne progi krytycznego napięcia (deviceId → V). */
+    val batteryThresholds: Map<String, Double> = emptyMap(),
+    val batteryAlerts: Boolean = false,
     /** Pojazd śledzony na mapie (mapa podąża za nim po każdym odświeżeniu). */
     val followId: String? = null,
     /** Stan i ostatni raport zaznaczonego pojazdu – do kafelka na mapie. */
@@ -47,6 +52,10 @@ data class FleetUiState(
 ) {
     /** Główna nazwa pojazdu wszędzie w aplikacji: opis własny z ustawień, a bez niego nazwa z systemu (deviceName). */
     fun nameOf(v: Vehicle): String = vehicleName(v, customLabels[v.deviceId])
+
+    /** Krytyczny próg napięcia akumulatora pojazdu [V]. */
+    fun batteryThreshold(v: Vehicle): Double =
+        batteryThresholds[v.deviceId] ?: pl.fleet.monitor.data.SessionStore.DEFAULT_BATTERY_THRESHOLD
 
     /** Dane dodatkowe pod nazwą: numer rejestracyjny i numer nadajnika. */
     fun infoOf(v: Vehicle): String = vehicleInfo(v)
@@ -93,6 +102,9 @@ fun vehicleInfo(v: Vehicle): String =
 /** Pozycje pojazdów odświeżane są zawsze co 30 sekund. */
 private const val REFRESH_INTERVAL_MS = 30_000L
 
+/** Napięcie akumulatora odświeżamy co 10 minut. */
+private const val VOLTAGE_INTERVAL_S = 600L
+
 class FleetViewModel : ViewModel() {
     private val container = AppGraph.container
     private val repo = container.repository
@@ -106,6 +118,25 @@ class FleetViewModel : ViewModel() {
 
     private var refreshJob: Job? = null
     private var previewJob: Job? = null
+    private var voltageJob: Job? = null
+    private var lastVoltageRefresh: Instant? = null
+
+    /** Odczyt napięcia akumulatora kolejno dla wszystkich pojazdów (wynik pokazywany na bieżąco). */
+    private suspend fun loadVoltages() {
+        val list = _ui.value.vehicles.filter { it.serial.isNotBlank() && it.deviceId !in _ui.value.hidden }
+        if (list.isEmpty()) return
+        lastVoltageRefresh = now()
+        for (v in list) {
+            val r = try {
+                repo.latestVoltage(v.serial)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+            if (r != null) _ui.update { it.copy(voltages = it.voltages + (v.deviceId to r)) }
+        }
+    }
     private val activityCache = mutableMapOf<String, Pair<Boolean, Instant?>>()
 
     /** Pobiera stan (jazda/postój od…) i ostatni raport zaznaczonego pojazdu. */
@@ -151,6 +182,11 @@ class FleetViewModel : ViewModel() {
             refreshJob?.join()
             val last = _ui.value.lastRefresh
             if (last == null || (now() - last).inWholeSeconds >= 5) load()
+            // Napięcie akumulatora pobieramy rzadziej (osobne zapytania routes dla każdego pojazdu).
+            val v = lastVoltageRefresh
+            if (voltageJob?.isActive != true && (v == null || (now() - v).inWholeSeconds >= VOLTAGE_INTERVAL_S)) {
+                voltageJob = viewModelScope.launch { loadVoltages() }
+            }
             delay(REFRESH_INTERVAL_MS)
         }
     }
@@ -238,7 +274,22 @@ class FleetViewModel : ViewModel() {
         markerScale = session.markerScale,
         keepScreenOn = session.keepScreenOn,
         showRouteLegend = session.showRouteLegend,
+        batteryThresholds = session.batteryThresholds,
+        batteryAlerts = session.batteryAlerts,
     )
+
+    fun setBatteryAlerts(enabled: Boolean) = _ui.update {
+        session.batteryAlerts = enabled
+        it.copy(batteryAlerts = enabled)
+    }
+
+    fun setBatteryThreshold(deviceId: String, volts: Double) = _ui.update {
+        val v = (kotlin.math.round(volts * 10) / 10)
+        val map = if (v == pl.fleet.monitor.data.SessionStore.DEFAULT_BATTERY_THRESHOLD) it.batteryThresholds - deviceId
+        else it.batteryThresholds + (deviceId to v)
+        session.batteryThresholds = map
+        it.copy(batteryThresholds = map)
+    }
 
     fun setShowRouteLegend(enabled: Boolean) = _ui.update {
         session.showRouteLegend = enabled
@@ -279,6 +330,8 @@ class FleetViewModel : ViewModel() {
 
     fun logout() {
         session.logout()
+        voltageJob?.cancel()
+        lastVoltageRefresh = null
         mapState.hasFitted = false
         _ui.value = initialState()
     }

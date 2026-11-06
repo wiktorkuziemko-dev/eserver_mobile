@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.BatteryAlert
 import androidx.compose.material.icons.outlined.Workspaces
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
@@ -155,6 +156,20 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                     }
                     Spacer(Modifier.size(8.dp))
                     Switch(checked = fleet.showRouteLegend, onCheckedChange = vm::setShowRouteLegend)
+                }
+
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.BatteryAlert, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Informuj o niskim stanie akumulatora", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Napięcie na liście pojazdów zielone powyżej progu, czerwone poniżej. Próg ustawisz w edycji pojazdu (domyślnie 12,4 V).",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.size(8.dp))
+                    Switch(checked = fleet.batteryAlerts, onCheckedChange = vm::setBatteryAlerts)
                 }
 
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))

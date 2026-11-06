@@ -22,6 +22,10 @@ data class RoutePoint(
     val address: String,
     /** Zdarzenie wykryte przez nadajnik (pole i_event): 'S' – start trasy, 'T' – koniec trasy. */
     val event: Char? = null,
+    /** Napięcie zasilania (akumulator) [V]. */
+    val voltage: Double? = null,
+    /** Obroty silnika [obr/min]. */
+    val rpm: Double? = null,
 )
 
 /** Postój: punkty [a]..[b], pozycja to średnia z tych punktów. */
@@ -458,3 +462,6 @@ fun RouteAnalysis.pointsKm(s: Int, e: Int): Double {
     for (k in s until e) if (k !in gapIdx) x += haversineKm(points[k].lat, points[k].lon, points[k + 1].lat, points[k + 1].lon)
     return x
 }
+
+/** Odczyt napięcia akumulatora z raportu nadajnika. */
+data class VoltageReading(val volts: Double, val time: Instant)

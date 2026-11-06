@@ -1,6 +1,9 @@
 package pl.fleet.monitor
 
+import androidx.compose.runtime.setValue
 import pl.fleet.monitor.ui.routes.RouteMapScreen
+import pl.fleet.monitor.ui.charts.ChartsScreen
+import pl.fleet.monitor.ui.charts.ChartsViewModel
 import pl.fleet.monitor.ui.routes.RouteMapViewModel
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +44,8 @@ private object Routes {
     const val VEHICLE = "vehicle/{id}"
     const val HISTORY = "history/{id}?serial={serial}"
     const val ROUTES = "routes/{id}?serial={serial}"
+    const val CHARTS = "charts/{id}?serial={serial}&from={from}&to={to}"
+    fun charts(id: String, serial: String, from: Long, to: Long) = "charts/$id?serial=$serial&from=$from&to=$to"
     fun routes(id: String, serial: String) = "routes/$id?serial=$serial"
     fun vehicle(id: String) = "vehicle/$id"
     fun history(id: String, serial: String) = "history/$id?serial=$serial"
@@ -63,6 +68,9 @@ private fun AppNavigation() {
         // Np. po odtworzeniu procesu na ekranie szczegółów – lista pojazdów musi zostać pobrana.
         if (credentials != null && fleetVm.ui.value.vehicles.isEmpty()) fleetVm.refresh()
     }
+
+    // Tytuł ekranu wykresów (dzień albo trasa) – zapamiętany przy obrocie ekranu.
+    var chartsTitle by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
 
     NavHost(nav, startDestination = if (credentials == null) Routes.LOGIN else Routes.MAIN) {
         composable(Routes.LOGIN) { LoginScreen(viewModel { LoginViewModel() }) }
@@ -114,7 +122,31 @@ private fun AppNavigation() {
             val serial = entry.savedStateHandle.get<String>("serial").orEmpty()
             val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.let { fleet.nameOf(it) }.orEmpty()
             val vm: HistoryViewModel = viewModel(key = "history-$id") { HistoryViewModel(serial) }
-            HistoryScreen(vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() })
+            HistoryScreen(
+                vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() },
+                onCharts = { from, to, title ->
+                    chartsTitle = title
+                    nav.navigate(Routes.charts(id, serial, from.epochSeconds, to.epochSeconds))
+                },
+            )
+        }
+
+        composable(
+            Routes.CHARTS,
+            arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("serial") { type = NavType.StringType; defaultValue = "" },
+                navArgument("from") { type = NavType.LongType; defaultValue = 0L },
+                navArgument("to") { type = NavType.LongType; defaultValue = 0L },
+            ),
+        ) { entry ->
+            val id = entry.savedStateHandle.get<String>("id").orEmpty()
+            val serial = entry.savedStateHandle.get<String>("serial").orEmpty()
+            val from = kotlin.time.Instant.fromEpochSeconds(entry.savedStateHandle.get<Long>("from") ?: 0L)
+            val to = kotlin.time.Instant.fromEpochSeconds(entry.savedStateHandle.get<Long>("to") ?: 0L)
+            val name = fleet.vehicles.firstOrNull { it.deviceId == id }?.let { fleet.nameOf(it) }.orEmpty()
+            val vm: ChartsViewModel = viewModel(key = "charts-$id-${from.epochSeconds}-${to.epochSeconds}") { ChartsViewModel(serial, from, to) }
+            ChartsScreen(vehicleName = name, title = chartsTitle.ifEmpty { "Wykresy" }, vm = vm, onBack = { nav.popBackStack() })
         }
 
         composable(

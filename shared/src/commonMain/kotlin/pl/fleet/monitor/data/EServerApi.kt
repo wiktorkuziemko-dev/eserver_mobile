@@ -162,6 +162,8 @@ class EServerApi(
                 address = (o["address"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty(),
                 // i_event: np. „2S” – start trasy, „2T” – koniec trasy (wykrywa nadajnik)
                 event = (o["i_event"] as? JsonPrimitive)?.contentOrNull?.trim()?.lastOrNull()?.uppercaseChar()?.takeIf { it == 'S' || it == 'T' },
+                voltage = o["voltage"].asDouble(), // „12,39” – przecinek dziesiętny
+                rpm = o["rpm"].asDouble(),
             )
         }
         return cleanRoutePoints(raw)

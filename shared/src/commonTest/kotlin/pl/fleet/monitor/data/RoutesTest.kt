@@ -58,7 +58,7 @@ class RoutesTest {
         assertEquals(false, points[0].ignition)
         assertEquals("", points[0].address)
         assertEquals("Zabrze", points[1].address)
-        assertEquals(49, points[1].fuel)
+        assertEquals(49.0, points[1].fuel)
         assertTrue(!points[0].speed.isNaN()) // brakująca prędkość wyliczona z pozycji
     }
 

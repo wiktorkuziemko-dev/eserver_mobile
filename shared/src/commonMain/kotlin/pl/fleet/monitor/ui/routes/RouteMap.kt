@@ -55,6 +55,7 @@ import pl.fleet.monitor.data.RoutePoint
 import pl.fleet.monitor.data.RouteStop
 import pl.fleet.monitor.data.RouteSample
 import ovh.plrapps.mapcompose.api.moveMarker
+import ovh.plrapps.mapcompose.api.updateMarkerClickable
 import pl.fleet.monitor.data.speedBucket
 import pl.fleet.monitor.ui.map.DEFAULT_DENSITY
 import pl.fleet.monitor.ui.map.FULL_SIZE
@@ -161,22 +162,26 @@ class RouteMapState {
 
         a.stops.forEachIndexed { si, st ->
             map.addMarker("s$si", lonToX(st.lon), latToY(st.lat), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 2f) {
-                val dim = focusTrip?.let { ft -> a.trips.getOrNull(ft)?.let { st.b != it.s && st.a != it.e } } ?: false
-                StopMarker(st, Modifier.alpha(if (dim) 0.2f else 1f))
+                // Przy wybranej trasie widać tylko postoje na jej początku i końcu.
+                val hidden = focusTrip?.let { ft -> a.trips.getOrNull(ft)?.let { st.b != it.s && st.a != it.e } } ?: false
+                StopMarker(st, Modifier.alpha(if (hidden) 0f else 1f))
             }
         }
         val first = p.first()
         val last = p.last()
         map.addMarker("A", first.x(), first.y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 3f, clickable = false) {
-            Flag("A", START_COLOR, 24.dp, Modifier.alpha(if (focusTrip != null) 0.15f else 1f))
+            Flag("A", START_COLOR, 24.dp, Modifier.alpha(if (focusTrip != null) 0f else 1f))
         }
         map.addMarker("B", last.x(), last.y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 3f, clickable = false) {
-            Flag("B", END_COLOR, 24.dp, Modifier.alpha(if (focusTrip != null) 0.15f else 1f))
+            Flag("B", END_COLOR, 24.dp, Modifier.alpha(if (focusTrip != null) 0f else 1f))
         }
         fit(p, maxZoom = 15.0, animate = false)
     }
 
-    /** Wyróżnia trasę: biała obwódka, ciemny środek, kolory prędkości na wierzchu, flagi S/K. */
+    /**
+     * Pokazuje tylko wybraną trasę (pozostałe trasy, przerwy, postoje i flagi A/B są ukryte):
+     * biała obwódka, ciemny środek, kolory prędkości na wierzchu, flagi S/K. null = wszystkie trasy.
+     */
     internal fun focus(ti: Int?, fitToTrip: Boolean = true) {
         val a = drawn ?: return
         map.removePaths { it.startsWith("h") }
@@ -185,14 +190,13 @@ class RouteMapState {
         focusTrip = ti
         val tr = ti?.let { a.trips.getOrNull(it) }
         segments.forEach { (i, list) ->
-            val alpha = when {
-                tr == null -> 0.92f
-                i == ti -> 0f
-                else -> 0.13f
-            }
-            list.forEach { map.updatePath(it.id, color = it.color.copy(alpha = alpha)) }
+            val alpha = if (tr == null) 0.92f else 0f
+            list.forEach { map.updatePath(it.id, color = it.color.copy(alpha = alpha), clickable = tr == null) }
         }
-        gapIds.forEach { map.updatePath(it, color = GAP_COLOR.copy(alpha = if (tr == null) 0.8f else 0.12f)) }
+        gapIds.forEach { map.updatePath(it, color = GAP_COLOR.copy(alpha = if (tr == null) 0.8f else 0f)) }
+        a.stops.forEachIndexed { si, st ->
+            map.updateMarkerClickable("s$si", tr == null || st.b == tr.s || st.a == tr.e)
+        }
         if (tr == null || ti == null) return
 
         val p = a.points
@@ -287,9 +291,10 @@ fun RouteMap(
             id.removePrefix("t").substringBefore('_').toIntOrNull()?.let { selectStop(null); selectTrip(it) }
         }
         state.map.onMarkerClick { id, _, _ ->
-            id.removePrefix("s").toIntOrNull()?.let { selectTrip(null); selectStop(it) }
+            id.removePrefix("s").toIntOrNull()?.let { selectStop(it) }
         }
-        state.map.onTap { _, _ -> selectTrip(null); selectStop(null) }
+        // Dotknięcie mapy zamyka tylko kartę postoju – wybór trasy zmienia się z listy tras.
+        state.map.onTap { _, _ -> selectStop(null) }
     }
     LaunchedEffect(analysis) {
         if (state.drawn !== analysis) state.draw(analysis)

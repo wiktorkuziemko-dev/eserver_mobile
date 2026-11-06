@@ -156,7 +156,7 @@ class EServerApi(
                 lon = lon,
                 speed = o["speed"].asDouble() ?: Double.NaN,
                 ignition = (o["ignition"] as? JsonPrimitive)?.takeIf { it.contentOrNull != null }?.let { o["ignition"].asBoolean() },
-                fuel = o["fuel"].asDouble()?.toInt(),
+                fuel = o["fuel"].asDouble(),
                 address = (o["address"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty(),
             )
         }

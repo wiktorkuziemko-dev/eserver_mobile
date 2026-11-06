@@ -332,7 +332,7 @@ private fun VehiclePreviewCard(
                     androidx.compose.ui.graphics.Color(0xFF1A5DBF), Modifier.weight(1f),
                 )
                 ArcGauge(
-                    v.fuelPercent?.toFloat(), 100f, v.fuelPercent?.let { "${Fmt.decimal(it, 0)}%" }, "paliwo",
+                    v.fuelLiters?.toFloat(), FUEL_MAX, v.fuelLiters?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
                     VehicleState.PARKED.color, Modifier.weight(1f),
                 )
             }
@@ -376,6 +376,8 @@ private val FOLLOW_TINT = androidx.compose.ui.graphics.Color(0xFFF5F9FF)
 
 private const val SPEED_MAX = 160f
 private const val RPM_MAX = 6000f
+/** Pojemność zbiornika nie jest znana – łuk paliwa liczony względem 100 l. */
+private const val FUEL_MAX = 100f
 
 /** Półokrągły zegar; brak wartości (null) – szary łuk i „—”. */
 @Composable

@@ -17,7 +17,8 @@ data class RoutePoint(
     /** Prędkość [km/h]; gdy brak w danych – liczona z sąsiednich pozycji. */
     val speed: Double,
     val ignition: Boolean?,
-    val fuel: Int?,
+    /** Paliwo [l]. */
+    val fuel: Double?,
     val address: String,
 )
 
@@ -193,7 +194,8 @@ data class RouteSample(
     /** Kierunek jazdy [°], 0 = północ. */
     val bearing: Double,
     val ignition: Boolean?,
-    val fuel: Int?,
+    /** Paliwo [l]. */
+    val fuel: Double?,
     /** Dystans przejechany od początku okresu [km] (bez przerw w danych). */
     val km: Double,
     val address: String,

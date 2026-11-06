@@ -39,6 +39,7 @@ data class FleetUiState(
     val clusterMarkers: Boolean = true,
     val markerScale: Float = 1f,
     val keepScreenOn: Boolean = true,
+    val showRouteLegend: Boolean = true,
     /** Pojazd śledzony na mapie (mapa podąża za nim po każdym odświeżeniu). */
     val followId: String? = null,
     /** Stan i ostatni raport zaznaczonego pojazdu – do kafelka na mapie. */
@@ -215,7 +216,13 @@ class FleetViewModel : ViewModel() {
         clusterMarkers = session.clusterMarkers,
         markerScale = session.markerScale,
         keepScreenOn = session.keepScreenOn,
+        showRouteLegend = session.showRouteLegend,
     )
+
+    fun setShowRouteLegend(enabled: Boolean) = _ui.update {
+        session.showRouteLegend = enabled
+        it.copy(showRouteLegend = enabled)
+    }
 
     fun setKeepScreenOn(enabled: Boolean) = _ui.update {
         session.keepScreenOn = enabled

@@ -50,17 +50,18 @@ data class RouteMapUiState(
     val sample: RouteSample? = null,
 )
 
-/** Odtwarzanie przejazdu: [factor] – ile sekund trasy na sekundę odtwarzania. */
+/** Tempo odtwarzania: [factor] – ile sekund trasy na sekundę animacji. */
+enum class PlaybackSpeed(val label: String, val factor: Int) { SLOW("Wolno", 20), FAST("Szybko", 60), ULTRA("Ultra", 240) }
+
+/** Odtwarzanie wybranej trasy (całego zakresu nie animujemy). */
 data class PlayerState(
     val active: Boolean = false,
     val playing: Boolean = false,
     val time: Instant? = null,
-    val factor: Int = 60,
-    val skipStops: Boolean = true,
-    val follow: Boolean = true,
+    val speed: PlaybackSpeed = PlaybackSpeed.FAST,
+    /** Dystans przejechany od początku wybranej trasy [km]. */
+    val km: Double = 0.0,
 )
-
-val PLAYER_FACTORS = listOf(10, 60, 300)
 
 class RouteMapViewModel(private val serial: String) : ViewModel() {
     private val repo = AppGraph.container.repository
@@ -69,6 +70,10 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
     val ui: StateFlow<RouteMapUiState> = _ui.asStateFlow()
 
     val mapState = RouteMapState()
+    private val session = AppGraph.container.session
+
+    /** Ustawienie „Pokazuj legendę w trasach na mapie”. */
+    val showLegend: Boolean get() = session.showRouteLegend
     private var job: Job? = null
     private var playJob: Job? = null
     private var playback: RoutePlayback? = null
@@ -94,10 +99,15 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
         load()
     }
 
-    fun selectTrip(i: Int?) = _ui.update { it.copy(selectedTrip = i, selectedStop = null, fitOnSelect = true) }
+    /** Wybór trasy pokazuje na mapie tylko ją; null = wszystkie trasy. Zmiana trasy kończy odtwarzanie. */
+    fun selectTrip(i: Int?) {
+        if (i != _ui.value.selectedTrip) closePlayer()
+        _ui.update { it.copy(selectedTrip = i, selectedStop = null, fitOnSelect = true) }
+    }
 
     fun selectStop(i: Int?) {
-        _ui.update { it.copy(selectedStop = i, selectedTrip = if (i != null) null else it.selectedTrip) }
+        if (_ui.value.player.active) return
+        _ui.update { it.copy(selectedStop = i) }
         i?.let { _ui.value.analysis?.stops?.getOrNull(it) }?.let(mapState::focusStop)
     }
 
@@ -135,24 +145,23 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
         }
     }
 
-    // ---- Odtwarzanie przejazdu ----
+    // ---- Odtwarzanie wybranej trasy ----
+
+    private fun selectedRange(): Pair<Instant, Instant>? {
+        val tr = _ui.value.selectedTrip?.let { _ui.value.analysis?.trips?.getOrNull(it) } ?: return null
+        return tr.start to tr.end
+    }
 
     fun togglePlay() {
-        val pb = playback ?: return
-        val start = pb.start ?: return
-        val end = pb.end ?: return
+        val (start, end) = selectedRange() ?: return
         val p = _ui.value.player
         if (p.playing) {
             playJob?.cancel()
             _ui.update { it.copy(player = it.player.copy(playing = false)) }
             return
         }
-        // Start: od wybranej trasy, od miejsca zatrzymania albo od początku okresu (po końcu – od nowa).
-        val from = when {
-            !p.active -> _ui.value.selectedTrip?.let { _ui.value.analysis?.trips?.getOrNull(it)?.start } ?: start
-            p.time == null || p.time >= end -> start
-            else -> p.time
-        }
+        // Od miejsca zatrzymania; po dojechaniu do końca – od początku trasy.
+        val from = p.time?.takeIf { p.active && it >= start && it < end } ?: start
         _ui.update { it.copy(player = it.player.copy(active = true, playing = true), selectedStop = null) }
         seek(from)
         playJob?.cancel()
@@ -163,8 +172,7 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
                 val elapsed = mark.elapsedNow()
                 mark = TimeSource.Monotonic.markNow()
                 val cur = _ui.value.player
-                var t = (cur.time ?: start) + elapsed * cur.factor
-                if (cur.skipStops) pb.stopAt(t)?.let { st -> if (st.end > t) t = st.end }
+                val t = (cur.time ?: start) + elapsed * cur.speed.factor
                 if (t >= end) {
                     seek(end)
                     _ui.update { it.copy(player = it.player.copy(playing = false)) }
@@ -175,33 +183,27 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
         }
     }
 
-    /** Przewinięcie suwakiem: [fraction] 0–1 okresu. */
+    /** Przewinięcie suwakiem: [fraction] 0–1 czasu wybranej trasy. */
     fun seekFraction(fraction: Float) {
-        val pb = playback ?: return
-        val start = pb.start ?: return
-        val end = pb.end ?: return
+        val (start, end) = selectedRange() ?: return
         _ui.update { it.copy(player = it.player.copy(active = true)) }
         seek(start + (end - start) * fraction.toDouble().coerceIn(0.0, 1.0))
     }
 
-    fun setFactor(f: Int) = _ui.update { it.copy(player = it.player.copy(factor = f)) }
-    fun toggleSkipStops() = _ui.update { it.copy(player = it.player.copy(skipStops = !it.player.skipStops)) }
-    fun toggleFollow() = _ui.update { it.copy(player = it.player.copy(follow = !it.player.follow)) }
+    fun setSpeed(speed: PlaybackSpeed) = _ui.update { it.copy(player = it.player.copy(speed = speed)) }
 
     fun closePlayer() {
         playJob?.cancel()
         mapState.hideVehicle()
-        _ui.update { it.copy(player = PlayerState(factor = it.player.factor, skipStops = it.player.skipStops, follow = it.player.follow), sample = null) }
+        _ui.update { it.copy(player = PlayerState(speed = it.player.speed), sample = null) }
     }
 
     private fun seek(t: Instant) {
         val s = playback?.sampleAt(t) ?: return
-        _ui.update {
-            // Bieżąca trasa jest wyróżniana na mapie (bez zmiany widoku – kamera podąża za pojazdem).
-            val trip = s.trip ?: it.selectedTrip
-            it.copy(player = it.player.copy(time = s.time), sample = s, selectedTrip = trip, fitOnSelect = false)
-        }
-        mapState.showVehicle(s, follow = _ui.value.player.follow)
+        val startKm = selectedRange()?.let { playback?.sampleAt(it.first)?.km } ?: s.km
+        _ui.update { it.copy(player = it.player.copy(time = s.time, km = (s.km - startKm).coerceAtLeast(0.0)), sample = s) }
+        // Wybrana trasa jest dopasowana do ekranu, więc mapa się nie przesuwa – porusza się tylko pojazd.
+        mapState.showVehicle(s, follow = false)
     }
 
     override fun onCleared() {

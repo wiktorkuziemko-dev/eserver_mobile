@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Workspaces
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
@@ -119,6 +120,20 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                     }
                     Spacer(Modifier.size(8.dp))
                     Switch(checked = fleet.keepScreenOn, onCheckedChange = vm::setKeepScreenOn)
+                }
+
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Pokazuj legendę w trasach na mapie", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Kolory prędkości i oznaczenia postojów na ekranie „Trasy na mapie”.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.size(8.dp))
+                    Switch(checked = fleet.showRouteLegend, onCheckedChange = vm::setShowRouteLegend)
                 }
 
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))

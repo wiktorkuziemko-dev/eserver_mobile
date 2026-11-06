@@ -161,7 +161,7 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
                     }
                 }
             }
-            ui.followed?.let { FollowInfo(ui.mapLabel(it), onStop = vm::stopFollowing) }
+            ui.followed?.let { FollowInfo(ui.nameOf(it), onStop = vm::stopFollowing) }
             HiddenInfo(ui, onShowAll = vm::showAllTypes)
             ui.error?.let { err ->
                 Spacer(Modifier.size(8.dp))
@@ -189,6 +189,8 @@ fun MapScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (String) -> U
             ui.selected?.let { v ->
                 VehiclePreviewCard(
                     v,
+                    name = ui.nameOf(v),
+                    info = ui.infoOf(v),
                     following = ui.followId == v.deviceId,
                     preview = ui.preview?.takeIf { it.deviceId == v.deviceId },
                     onFollow = { vm.follow(v.deviceId) },
@@ -297,6 +299,8 @@ private fun Segment(
 @Composable
 private fun VehiclePreviewCard(
     v: Vehicle,
+    name: String,
+    info: String,
     following: Boolean,
     preview: pl.fleet.monitor.ui.PreviewInfo?,
     onFollow: () -> Unit,
@@ -313,9 +317,10 @@ private fun VehiclePreviewCard(
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(v.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    if (v.displayName != v.label) {
-                        Text(v.displayName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (info.isNotEmpty()) {
+                        Text(info, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

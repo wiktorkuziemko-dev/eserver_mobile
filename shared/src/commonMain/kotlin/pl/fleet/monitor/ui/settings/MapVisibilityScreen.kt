@@ -110,15 +110,15 @@ fun MapVisibilityScreen(vm: FleetViewModel, onBack: () -> Unit) {
                         )
                         Column(Modifier.weight(1f)) {
                             Text(
-                                v.displayName.ifBlank { v.label }, fontWeight = FontWeight.SemiBold,
+                                ui.nameOf(v), fontWeight = FontWeight.SemiBold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
-                            if (v.serial.isNotBlank()) {
-                                Text("Nr nadajnika: ${v.serial}", style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            ui.infoOf(v).takeIf { it.isNotEmpty() }?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            ui.customLabels[v.deviceId]?.let {
-                                Text("Opis na mapie: $it", style = MaterialTheme.typography.bodySmall,
+                            // Z opisem własnym pokazujemy też nazwę z systemu, żeby było wiadomo, który to pojazd.
+                            if (ui.customLabels[v.deviceId] != null && v.displayName.isNotBlank()) {
+                                Text("Nazwa w systemie: ${v.displayName}", style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
@@ -177,9 +177,9 @@ private fun EditVehicleDialog(
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it.take(40) },
-                    label = { Text("Opis na mapie") },
+                    label = { Text("Nazwa własna") },
                     placeholder = { Text(vehicleName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    supportingText = { Text("Puste pole = nazwa pojazdu") },
+                    supportingText = { Text("Używana wszędzie w aplikacji. Puste pole = nazwa z systemu.") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

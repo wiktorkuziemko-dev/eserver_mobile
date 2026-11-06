@@ -110,6 +110,12 @@ class RouteMapViewModel(private val serial: String) : ViewModel() {
         _ui.update { it.copy(selectedTrip = i, selectedEvent = null, fitOnSelect = true) }
     }
 
+    /** Postój wybrany z listy: widok wszystkich tras, karta postoju i przybliżenie do niego. */
+    fun showStop(i: Int) {
+        selectTrip(null)
+        selectEvent(MapEvent.Stop(i))
+    }
+
     fun selectEvent(e: MapEvent?) {
         if (_ui.value.player.active && e != null) return
         _ui.update { it.copy(selectedEvent = e) }

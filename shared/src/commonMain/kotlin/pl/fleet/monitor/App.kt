@@ -112,7 +112,7 @@ private fun AppNavigation() {
         ) { entry ->
             val id = entry.savedStateHandle.get<String>("id").orEmpty()
             val serial = entry.savedStateHandle.get<String>("serial").orEmpty()
-            val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.label.orEmpty()
+            val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.let { fleet.nameOf(it) }.orEmpty()
             val vm: HistoryViewModel = viewModel(key = "history-$id") { HistoryViewModel(serial) }
             HistoryScreen(vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() })
         }
@@ -126,7 +126,7 @@ private fun AppNavigation() {
         ) { entry ->
             val id = entry.savedStateHandle.get<String>("id").orEmpty()
             val serial = entry.savedStateHandle.get<String>("serial").orEmpty()
-            val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.label.orEmpty()
+            val label = fleet.vehicles.firstOrNull { it.deviceId == id }?.let { fleet.nameOf(it) }.orEmpty()
             val vm: RouteMapViewModel = viewModel(key = "routes-$id") { RouteMapViewModel(serial) }
             RouteMapScreen(vehicleLabel = label, vm = vm, onBack = { nav.popBackStack() })
         }

@@ -178,14 +178,6 @@ class RouteMapState {
                 StopMarker(st, Modifier.alpha(if (focusTrip != null) 0f else 1f))
             }
         }
-        val first = p.first()
-        val last = p.last()
-        map.addMarker("A", first.x(), first.y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 3f, clickable = false) {
-            Flag("A", START_COLOR, 24.dp, Modifier.alpha(if (focusTrip != null) 0f else 1f))
-        }
-        map.addMarker("B", last.x(), last.y(), relativeOffset = Offset(-0.5f, -0.5f), zIndex = 3f, clickable = false) {
-            Flag("B", END_COLOR, 24.dp, Modifier.alpha(if (focusTrip != null) 0f else 1f))
-        }
         fit(p, maxZoom = 15.0, animate = false)
     }
 

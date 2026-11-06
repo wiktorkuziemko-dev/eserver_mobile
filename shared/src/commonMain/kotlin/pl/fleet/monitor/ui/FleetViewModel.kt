@@ -45,8 +45,11 @@ data class FleetUiState(
     /** Stan i ostatni raport zaznaczonego pojazdu – do kafelka na mapie. */
     val preview: PreviewInfo? = null,
 ) {
-    /** Opis pojazdu na mapie: własny z ustawień albo nazwa pojazdu. */
-    fun mapLabel(v: Vehicle): String = customLabels[v.deviceId] ?: v.displayName.ifBlank { v.label }
+    /** Główna nazwa pojazdu wszędzie w aplikacji: opis własny z ustawień, a bez niego nazwa z systemu (deviceName). */
+    fun nameOf(v: Vehicle): String = vehicleName(v, customLabels[v.deviceId])
+
+    /** Dane dodatkowe pod nazwą: numer rejestracyjny i numer nadajnika. */
+    fun infoOf(v: Vehicle): String = vehicleInfo(v)
 
     val selected: Vehicle? get() = vehicles.firstOrNull { it.deviceId == selectedId }
     val followed: Vehicle? get() = vehicles.firstOrNull { it.deviceId == followId }
@@ -54,7 +57,8 @@ data class FleetUiState(
     val filtered: List<Vehicle>
         get() = vehicles.filter { v ->
             v.deviceId !in hidden && (stateFilter == null || v.state == stateFilter) &&
-                (query.isBlank() || listOf(v.plateNo, v.name, v.serial).any { it.contains(query.trim(), ignoreCase = true) })
+                (query.isBlank() || listOf(v.plateNo, v.name, v.serial, customLabels[v.deviceId].orEmpty())
+                    .any { it.contains(query.trim(), ignoreCase = true) })
         }
 
     fun count(state: VehicleState) = vehicles.count { it.state == state }
@@ -76,6 +80,14 @@ data class PreviewInfo(
     val status: Loadable<MotionStatus> = Loadable.Loading,
     val lastReport: Loadable<Instant?> = Loadable.Loading,
 )
+
+/** Główna nazwa pojazdu: opis własny, a bez niego nazwa z systemu (deviceName bez numeru nadajnika). */
+fun vehicleName(v: Vehicle, customLabel: String?): String =
+    customLabel?.takeIf { it.isNotBlank() } ?: v.displayName.ifBlank { v.plateNo.ifBlank { v.serial } }
+
+/** Dane dodatkowe: „WX 12345 · nr nadajnika 36110001”. */
+fun vehicleInfo(v: Vehicle): String =
+    listOfNotNull(v.plateNo.takeIf { it.isNotBlank() }, v.serial.takeIf { it.isNotBlank() }?.let { "nr nadajnika $it" }).joinToString(" · ")
 
 /** Współdzielony stan floty – wykorzystywany przez mapę, listę i szczegóły pojazdu. */
 /** Pozycje pojazdów odświeżane są zawsze co 30 sekund. */

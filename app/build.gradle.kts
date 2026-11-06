@@ -17,7 +17,7 @@ android {
         versionCode = if (System.getenv("CI") != null) {
             ((System.currentTimeMillis() / 1000 - 1_735_689_600L) / 60).toInt()
         } else 14
-        versionName = "2.4.0"
+        versionName = "2.5.0"
     }
 
     // Klucz przesyłania do Google Play – z sekretów GitHuba (ścieżka do pliku i hasła w zmiennych środowiskowych).

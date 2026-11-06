@@ -99,8 +99,8 @@ fun VehicleDetailsScreen(
     Scaffold(
         topBar = {
             GradientTopBar(
-                title = vehicle.label,
-                subtitle = vehicle.displayName.takeIf { it != vehicle.label },
+                title = pl.fleet.monitor.ui.vehicleName(vehicle, customLabel),
+                subtitle = pl.fleet.monitor.ui.vehicleInfo(vehicle).ifEmpty { null },
                 onBack = onBack,
                 actions = {
                     IconButton(onClick = { onRefresh(); vm.load() }) { Icon(Icons.Outlined.Refresh, "Odśwież") }
@@ -197,7 +197,7 @@ fun VehicleDetailsScreen(
         }
     }
 
-    ui.diagnostics?.let { d -> DiagnosticsDialog(d, vehicle.label, onClose = vm::closeDiagnostics) }
+    ui.diagnostics?.let { d -> DiagnosticsDialog(d, pl.fleet.monitor.ui.vehicleName(vehicle, customLabel), onClose = vm::closeDiagnostics) }
 }
 
 /** Przycisk „Diagnostyka API” w szczegółach pojazdu – ustaw na true, aby go pokazać. */

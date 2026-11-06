@@ -99,7 +99,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
                         }
                     }
                     items(ui.filtered, key = { it.deviceId }) { v ->
-                        VehicleRow(v, ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT, onClick = { onOpenVehicle(v.deviceId) })
+                        VehicleRow(v, ui.nameOf(v), ui.infoOf(v), ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT, onClick = { onOpenVehicle(v.deviceId) })
                     }
                 }
             }
@@ -108,7 +108,7 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
 }
 
 @Composable
-private fun VehicleRow(v: Vehicle, icon: VehicleIcon, onClick: () -> Unit) {
+private fun VehicleRow(v: Vehicle, name: String, info: String, icon: VehicleIcon, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -122,10 +122,10 @@ private fun VehicleRow(v: Vehicle, icon: VehicleIcon, onClick: () -> Unit) {
             Icon(icon.vector, icon.label, Modifier.size(28.dp), tint = v.state.color)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                // Nazwa pojazdu jak na mapie, pod nią numer nadajnika
+                // Nazwa pojazdu (opis własny albo nazwa z systemu), pod nią nr rejestracyjny i nr nadajnika
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        v.displayName.ifBlank { v.label },
+                        name,
                         Modifier.weight(1f, fill = false),
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -133,9 +133,9 @@ private fun VehicleRow(v: Vehicle, icon: VehicleIcon, onClick: () -> Unit) {
                     Spacer(Modifier.width(8.dp))
                     StateBadge(v.state)
                 }
-                if (v.serial.isNotBlank()) {
+                if (info.isNotEmpty()) {
                     Text(
-                        "Nr nadajnika: ${v.serial}", style = MaterialTheme.typography.bodySmall,
+                        info, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

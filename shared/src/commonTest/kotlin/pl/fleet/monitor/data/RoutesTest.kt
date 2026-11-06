@@ -138,3 +138,35 @@ class RoutePausesTest {
         assertTrue(pauses.single().seconds >= 120)
     }
 }
+
+class RouteEventsTest {
+    private fun ev(sec: Long, lat: Double, speed: Double, event: Char? = null, ign: Boolean? = true) =
+        RoutePoint(T0 + sec.seconds, lat, 19.0, speed, ign, null, "", event)
+
+    @Test fun tripsFollowTransmitterStartAndEnd() {
+        val points = listOf(
+            ev(0, 50.0, 0.0, ign = false),
+            ev(600, 50.0, 0.0, 'S'),               // start
+            ev(660, 50.01, 50.0),
+            ev(720, 50.02, 50.0),
+            ev(780, 50.03, 7.0, 'T', ign = false), // koniec (pojazd jeszcze się toczy)
+            ev(1800, 50.03, 0.0, 'S'),             // samo uruchomienie silnika – 0 m, pomijane
+            ev(1806, 50.03, 0.0, 'T', ign = false),
+            ev(3600, 50.03, 0.0, 'S'),
+            ev(3660, 50.05, 60.0),                 // trasa trwa do końca okresu (brak T)
+        )
+        val a = analyzeByEvents(points)
+        assertEquals(2, a.trips.size)
+        assertEquals(1, a.trips[0].s)
+        assertEquals(4, a.trips[0].e)
+        assertEquals(7, a.trips[1].s)
+        assertEquals(8, a.trips[1].e)
+        // postój przed pierwszą trasą i jeden połączony postój między trasami (z pominiętym uruchomieniem)
+        assertEquals(2, a.stops.size)
+        assertEquals(4, a.stops[1].a)
+        assertEquals(7, a.stops[1].b)
+        assertEquals(50.03, a.stops[1].lat, 1e-9)
+        // analyzeRoute wybiera metodę zdarzeń, gdy są znaczniki S/T
+        assertEquals(a.trips, analyzeRoute(points).trips)
+    }
+}

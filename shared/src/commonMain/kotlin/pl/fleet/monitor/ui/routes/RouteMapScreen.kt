@@ -154,12 +154,12 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
                                 trip, ui.selectedTrip!!, analysis.trips.size,
                                 onPrev = { vm.stepTrip(-1) }, onNext = { vm.stepTrip(1) }, onClose = { vm.selectTrip(null) },
                             )
-                            // Animacja jest dostępna dopiero po wybraniu konkretnej trasy.
-                            Spacer(Modifier.height(8.dp))
-                            PlayButton("Odtwórz przejazd tej trasy", onClick = vm::togglePlay)
                         }
-                        // Bez wybranej trasy – animacja całego widocznego zakresu.
-                        analysis.trips.isNotEmpty() -> PlayButton("Odtwórz cały zakres", onClick = vm::togglePlay)
+                    }
+                    // Animacja tego, co jest wybrane: jednej trasy albo całego zakresu.
+                    if (!player.active && event == null && analysis.trips.isNotEmpty()) {
+                        if (trip != null) Spacer(Modifier.height(8.dp))
+                        PlayButton("Animacja przejazdu", onClick = vm::togglePlay)
                     }
                 }
             }
@@ -168,7 +168,8 @@ fun RouteMapScreen(vehicleLabel: String, vm: RouteMapViewModel, onBack: () -> Un
 
     if (showTrips) {
         ui.analysis?.let { a ->
-            TripListSheet(a, ui.selectedTrip, onDismiss = { showTrips = false }) { i ->
+            TripListSheet(a, ui.selectedTrip, onDismiss = { showTrips = false },
+                onPickStop = { i -> showTrips = false; vm.showStop(i) }) { i ->
                 showTrips = false
                 vm.selectTrip(i)
             }
@@ -488,7 +489,7 @@ private fun TripSelector(a: RouteAnalysis, selected: Int?, onClick: () -> Unit) 
 /** Lista zrealizowanych tras (pogrupowana po dniach) – wybór pokazuje na mapie tylko tę trasę. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TripListSheet(a: RouteAnalysis, selected: Int?, onDismiss: () -> Unit, onPick: (Int?) -> Unit) {
+private fun TripListSheet(a: RouteAnalysis, selected: Int?, onDismiss: () -> Unit, onPickStop: (Int) -> Unit, onPick: (Int?) -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
             item {
@@ -499,7 +500,10 @@ private fun TripListSheet(a: RouteAnalysis, selected: Int?, onDismiss: () -> Uni
                     onClick = { onPick(null) },
                 )
             }
-            a.trips.withIndex().groupBy { Fmt.local(it.value.start).date }.forEach { (day, trips) ->
+            // Trasy i postoje w kolejności czasu, pogrupowane po dniach
+            val entries = (a.trips.mapIndexed { i, t -> Triple(t.start, i, true) } + a.stops.mapIndexed { i, st -> Triple(st.start, i, false) })
+                .sortedBy { it.first }
+            entries.groupBy { Fmt.local(it.first).date }.forEach { (day, list) ->
                 item {
                     Text(
                         Fmt.dayHeader(day),
@@ -509,8 +513,13 @@ private fun TripListSheet(a: RouteAnalysis, selected: Int?, onDismiss: () -> Uni
                         fontWeight = FontWeight.Bold,
                     )
                 }
-                items(trips.size) { j ->
-                    val (i, tr) = trips[j]
+                items(list.size) { j ->
+                    val (_, i, isTrip) = list[j]
+                    if (!isTrip) {
+                        StopRow(a.stops[i], onClick = { onPickStop(i) })
+                        return@items
+                    }
+                    val tr = a.trips[i]
                     TripRow(
                         title = "Trasa ${i + 1} · ${hm(tr.start)}–${hm(tr.end)} · ${Fmt.km(tr.km)}",
                         subtitle = listOf(shortAddress(tr.from), shortAddress(tr.to)).filter { it.isNotEmpty() }.joinToString(" → ")
@@ -519,6 +528,28 @@ private fun TripListSheet(a: RouteAnalysis, selected: Int?, onDismiss: () -> Uni
                         onClick = { onPick(i) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StopRow(st: RouteStop, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StopMarker(st, Modifier.padding(start = 2.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                "Postój · ${hm(st.start)}–${hm(st.end)} · ${Fmt.duration(st.seconds)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            shortAddress(st.address).takeIf { it.isNotEmpty() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

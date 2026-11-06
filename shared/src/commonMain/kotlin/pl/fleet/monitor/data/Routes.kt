@@ -20,6 +20,8 @@ data class RoutePoint(
     /** Paliwo [l]. */
     val fuel: Double?,
     val address: String,
+    /** Zdarzenie wykryte przez nadajnik (pole i_event): 'S' – start trasy, 'T' – koniec trasy. */
+    val event: Char? = null,
 )
 
 /** Postój: punkty [a]..[b], pozycja to średnia z tych punktów. */
@@ -119,6 +121,9 @@ fun cleanRoutePoints(raw: List<RoutePoint>): List<RoutePoint> {
  *  - przejazdy krótsze niż 100 m są pomijane.
  */
 fun analyzeRoute(points: List<RoutePoint>, minStopMinutes: Int = 5, stillKmh: Double = 3.0): RouteAnalysis {
+    // Nadajnik sam wykrywa start (S) i koniec (T) trasy – z zapłonu albo żyroskopu. Gdy podaje te zdarzenia,
+    // to one wyznaczają trasy i postoje; analiza prędkości zostaje dla nadajników bez i_event.
+    if (points.any { it.event == 'S' || it.event == 'T' }) return analyzeByEvents(points)
     val p = points
     val n = p.size
     if (n == 0) return RouteAnalysis.EMPTY
@@ -305,4 +310,91 @@ fun RouteAnalysis.pausesIn(trip: RouteTrip, minSeconds: Long = 120, stillKmh: Do
         }
     }
     return out
+}
+
+/** Odległości i przerwy w danych między kolejnymi punktami (wspólne dla obu metod). */
+private class Edges(p: List<RoutePoint>) {
+    val d = DoubleArray(max(0, p.size - 1)) { dist(p[it], p[it + 1]) }
+    val gap = BooleanArray(d.size) { i ->
+        val dtMs = (p[i + 1].time - p[i].time).inWholeMilliseconds
+        val hours = (dtMs / 3_600_000.0).takeIf { it > 0 } ?: 1e-9
+        d[i] > 1 && ((dtMs > 15 * 60_000L && d[i] > 2) || d[i] / hours > 220)
+    }
+}
+
+/**
+ * Trasy według zdarzeń nadajnika: od punktu „S” do najbliższego „T”.
+ *  - start bez końca (trasa trwa na końcu okresu) – do ostatniego punktu;
+ *  - koniec bez startu (okres zaczyna się w trakcie jazdy) – od pierwszego punktu;
+ *  - trasy krótsze niż 100 m (np. samo uruchomienie silnika) są pomijane i stają się częścią postoju;
+ *  - trasy rozdzielone postojem krótszym niż [minStopSeconds] są łączone;
+ *  - postój to wszystko pomiędzy trasami (także przed pierwszą i po ostatniej).
+ */
+fun analyzeByEvents(points: List<RoutePoint>, minStopSeconds: Long = 60): RouteAnalysis {
+    val p = points
+    val n = p.size
+    if (n == 0) return RouteAnalysis.EMPTY
+    val edges = Edges(p)
+    fun km(s: Int, e: Int): Double {
+        var x = 0.0
+        for (k in s until e) if (!edges.gap[k]) x += edges.d[k]
+        return x
+    }
+
+    // Pary S…T
+    val raw = mutableListOf<Pair<Int, Int>>()
+    var open: Int? = null
+    for (k in 0 until n) {
+        when (p[k].event) {
+            'S' -> if (open == null) open = k
+            'T' -> {
+                val s = open ?: if (raw.isEmpty()) 0 else null
+                if (s != null && k > s) raw += s to k
+                open = null
+            }
+        }
+    }
+    open?.let { if (n - 1 > it) raw += it to n - 1 }
+
+    // Odrzucenie tras < 100 m i łączenie tras rozdzielonych bardzo krótkim postojem
+    val merged = mutableListOf<Pair<Int, Int>>()
+    for ((s, e) in raw.filter { (s, e) -> km(s, e) >= 0.1 }) {
+        val last = merged.lastOrNull()
+        if (last != null && (p[s].time - p[last.second].time).inWholeSeconds < minStopSeconds) {
+            merged[merged.size - 1] = last.first to e
+        } else {
+            merged += s to e
+        }
+    }
+
+    val trips = merged.map { (s, e) ->
+        var mx = 0.0
+        for (k in s..e) mx = max(mx, p[k].speed)
+        val dist = km(s, e)
+        val hours = (p[e].time - p[s].time).inWholeMilliseconds / 3_600_000.0
+        RouteTrip(s, e, p[s].time, p[e].time, dist, mx, if (hours > 0) dist / hours else 0.0, p[s].address, p[e].address)
+    }
+
+    val stops = mutableListOf<RouteStop>()
+    fun addStop(a: Int, b: Int) {
+        if (b <= a || p[b].time <= p[a].time) return
+        // Pozycja postoju: miejsce zakończenia trasy (punkt „T”), a gdy go brak – średnia z punktów postoju.
+        val cnt = b - a + 1
+        val lat = if (a > 0) p[a].lat else (a..b).sumOf { p[it].lat } / cnt
+        val lon = if (a > 0) p[a].lon else (a..b).sumOf { p[it].lon } / cnt
+        var idle = 0L
+        for (k in a until b) if (p[k].ignition == true && p[k + 1].ignition == true) idle += (p[k + 1].time - p[k].time).inWholeMilliseconds
+        val addr = (a..b).firstNotNullOfOrNull { p[it].address.takeIf(String::isNotEmpty) }.orEmpty()
+        stops += RouteStop(a, b, p[a].time, p[b].time, lat, lon, idle / 1000, addr)
+    }
+    if (trips.isEmpty()) {
+        addStop(0, n - 1)
+    } else {
+        if (trips.first().s > 0) addStop(0, trips.first().s)
+        trips.zipWithNext().forEach { (x, y) -> addStop(x.e, y.s) }
+        if (trips.last().e < n - 1) addStop(trips.last().e, n - 1)
+    }
+
+    val gaps = trips.flatMap { tr -> (tr.s until tr.e).filter { edges.gap[it] }.map { RouteGap(it, edges.d[it]) } }
+    return RouteAnalysis(p, trips, stops, gaps)
 }

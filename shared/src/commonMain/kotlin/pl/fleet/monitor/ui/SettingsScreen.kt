@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -62,18 +64,37 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
         Text("Ustawienia", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
         SectionTitle("Konto")
-        Card(Modifier.fillMaxWidth(), shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
-            Row(
-                Modifier.fillMaxWidth().background(pl.fleet.monitor.ui.theme.BrandGradient).padding(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        // Kafelek konta i obok taki sam kafelek wylogowania.
+        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(Modifier.weight(1f).fillMaxHeight(), shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)) {
+                Row(
+                    Modifier.fillMaxSize().background(pl.fleet.monitor.ui.theme.BrandGradient).padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.AccountCircle, null, Modifier.size(32.dp), tint = androidx.compose.ui.graphics.Color.White)
+                    Spacer(Modifier.size(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(creds?.login.orEmpty(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                            color = androidx.compose.ui.graphics.Color.White, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("Zalogowany użytkownik", style = MaterialTheme.typography.labelSmall,
+                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
+                    }
+                }
+            }
+            Card(
+                onClick = { confirmLogout = true },
+                modifier = Modifier.width(92.dp).fillMaxHeight(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
             ) {
-                Icon(Icons.Outlined.AccountCircle, null, Modifier.size(44.dp), tint = androidx.compose.ui.graphics.Color.White)
-                Spacer(Modifier.size(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(creds?.login.orEmpty(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                Column(
+                    Modifier.fillMaxSize().background(pl.fleet.monitor.ui.theme.BrandGradient).padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.Logout, null, Modifier.size(26.dp), tint = androidx.compose.ui.graphics.Color.White)
+                    Text("Wyloguj", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
                         color = androidx.compose.ui.graphics.Color.White)
-                    Text("Zalogowany użytkownik", style = MaterialTheme.typography.bodySmall,
-                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
                 }
             }
         }
@@ -84,7 +105,7 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                 Icon(Icons.Outlined.Visibility, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Widoczność, ikony i opisy pojazdów", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("Widoczność, ikony i nazwy pojazdów", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     val visible = fleet.vehicles.count { it.deviceId !in fleet.hidden }
                     Text("Widoczne w aplikacji: $visible z ${fleet.vehicles.size}", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -164,13 +185,7 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
             }
         }
 
-        Spacer(Modifier.size(32.dp))
-        OutlinedButton(onClick = { confirmLogout = true }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.AutoMirrored.Outlined.Logout, null)
-            Spacer(Modifier.size(8.dp))
-            Text("Wyloguj")
-        }
-        Spacer(Modifier.size(16.dp))
+        Spacer(Modifier.size(24.dp))
         Text(
             "Wersja ${vm.appVersion} · Mapa © OpenStreetMap contributors",
             style = MaterialTheme.typography.labelSmall,

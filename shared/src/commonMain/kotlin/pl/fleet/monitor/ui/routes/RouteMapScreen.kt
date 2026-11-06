@@ -338,7 +338,6 @@ private fun LegendStop(color: Color, label: String) {
 
 private val ACCENT = Color(0xFFF0AD1C)
 private val ON_ACCENT = Color(0xFF1A1400)
-private val INK = Color(0xFF1A2028)
 
 @Composable
 private fun PlayButton(text: String, onClick: () -> Unit) {

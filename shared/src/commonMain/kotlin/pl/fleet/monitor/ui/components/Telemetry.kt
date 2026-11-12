@@ -1,6 +1,7 @@
 package pl.fleet.monitor.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,68 +59,82 @@ private val OK_FG = Color(0xFF1B6B2C)
 private val LOW_BG = Color(0xFFFDE2E1)
 private val LOW_FG = Color(0xFFB3261E)
 
-/**
- * Siła sygnału jak w telefonie: 4 kreski rosnącej wysokości, wypełnione według poziomu 0–31
- * (przeliczonego na 0–4 kreski), z podpisem „GSM” / „GPS”.
- */
+private val CHIP_BG = Color(0xFFF1F2F4)
+private val CHIP_SHAPE = RoundedCornerShape(8.dp)
+
+/** Pojedynczy chip: ikona + krótki tekst, szare tło (akumulator – kolorowe przy ocenie progu). */
 @Composable
-fun SignalIndicator(label: String, level: Int?, modifier: Modifier = Modifier) {
+private fun Chip(bg: Color, content: @Composable () -> Unit) {
+    Row(
+        Modifier.background(bg, CHIP_SHAPE).padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) { content() }
+}
+
+/** Kreski siły sygnału (0–4) jak w telefonie. */
+@Composable
+private fun SignalBars(level: Int?) {
     val bars = signalBars(level)
     val on = MaterialTheme.colorScheme.onSurface
-    val off = MaterialTheme.colorScheme.outlineVariant
-    Column(
-        modifier.semantics { contentDescription = "$label: ${level?.let { "$bars z 4" } ?: "brak danych"}" },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Canvas(Modifier.size(width = 18.dp, height = 13.dp)) {
-            val w = size.width / 4
-            val gap = 1.5.dp.toPx()
-            for (i in 0 until 4) {
-                val bh = size.height * (i + 1) / 4
-                drawRoundRect(
-                    if (level != null && i < bars) on else off,
-                    topLeft = Offset(i * w + gap / 2, size.height - bh),
-                    size = Size(w - gap, bh),
-                    cornerRadius = CornerRadius(1.dp.toPx()),
-                )
-            }
+    val off = Color(0xFFC9CDD2)
+    Canvas(Modifier.size(width = 16.dp, height = 12.dp)) {
+        val w = size.width / 4
+        val gap = 1.3.dp.toPx()
+        for (i in 0 until 4) {
+            val bh = size.height * (i + 1) / 4
+            drawRoundRect(
+                if (i < bars) on else off,
+                topLeft = Offset(i * w + gap / 2, size.height - bh),
+                size = Size(w - gap, bh),
+                cornerRadius = CornerRadius(1.dp.toPx()),
+            )
         }
-        Text(label, fontSize = 9.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 /**
- * Napięcie akumulatora z ikoną akumulatora samochodowego. [ok] = null – bez oceny (szary opis),
- * true – zielona plakietka, false – czerwona plakietka z wykrzyknikiem.
+ * Rząd chipów stanu nadajnika – identyczny na liście pojazdów i na kafelku mapy:
+ * GSM i GPS (kreski 0–4), akumulator (zielony / czerwony z „!” przy włączonym ostrzeganiu)
+ * i – gdy [fuel] podane – paliwo. Bez żadnych danych z nadajnika: jeden chip „Brak danych…”.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun BatteryIndicator(volts: Double?, ok: Boolean?, modifier: Modifier = Modifier) {
-    val text = volts?.let { "${Fmt.decimal(it, 1)} V" } ?: "— V"
-    if (ok == null || volts == null) {
-        Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-            Icon(CarBatteryIcon, "Akumulator", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.width(3.dp))
-            Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun TelemetryChips(telemetry: VehicleTelemetry?, batteryOk: Boolean?, fuel: Double?, modifier: Modifier = Modifier) {
+    val labelStyle = MaterialTheme.typography.labelMedium
+    val hasData = telemetry != null && (telemetry.gsm != null || telemetry.gps != null || telemetry.volts != null)
+    androidx.compose.foundation.layout.FlowRow(
+        modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (!hasData) {
+            Chip(CHIP_BG) {
+                Text("Brak danych z nadajnika (GSM, GPS, akumulator)", style = labelStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            telemetry!!.gsm?.let { Chip(CHIP_BG) { SignalBars(it); Text("GSM", style = labelStyle) } }
+            telemetry.gps?.let { Chip(CHIP_BG) { SignalBars(it); Text("GPS", style = labelStyle) } }
+            telemetry.volts?.let { v ->
+                val text = "${Fmt.decimal(v, 1)} V"
+                when (batteryOk) {
+                    null -> Chip(CHIP_BG) { Icon(CarBatteryIcon, "Akumulator", Modifier.size(16.dp)); Text(text, style = labelStyle) }
+                    true -> Chip(OK_BG) {
+                        Icon(CarBatteryIcon, "Akumulator", Modifier.size(16.dp), tint = OK_FG)
+                        Text(text, style = labelStyle, fontWeight = FontWeight.Bold, color = OK_FG)
+                    }
+                    false -> Chip(LOW_BG) {
+                        Icon(CarBatteryIcon, "Niski stan akumulatora", Modifier.size(16.dp), tint = LOW_FG)
+                        Text("$text !", style = labelStyle, fontWeight = FontWeight.Bold, color = LOW_FG)
+                    }
+                }
+            }
         }
-    } else {
-        val fg = if (ok) OK_FG else LOW_FG
-        Row(
-            modifier.background(if (ok) OK_BG else LOW_BG, RoundedCornerShape(50)).padding(start = 6.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(CarBatteryIcon, if (ok) "Akumulator" else "Niski stan akumulatora", Modifier.size(15.dp), tint = fg)
-            Spacer(Modifier.width(3.dp))
-            Text(if (ok) text else "$text !", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = fg)
+        fuel?.let { f ->
+            Chip(CHIP_BG) {
+                Icon(androidx.compose.material.icons.Icons.Outlined.LocalGasStation, "Paliwo", Modifier.size(15.dp))
+                Text("${Fmt.decimal(f, 0)} l", style = labelStyle)
+            }
         }
-    }
-}
-
-/** Zestaw wskaźników stanu nadajnika: GSM, GPS i akumulator – na kafelku mapy i na liście pojazdów. */
-@Composable
-fun TelemetryIndicators(telemetry: VehicleTelemetry?, batteryOk: Boolean?, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        SignalIndicator("GSM", telemetry?.gsm)
-        SignalIndicator("GPS", telemetry?.gps)
-        BatteryIndicator(telemetry?.volts, batteryOk)
     }
 }

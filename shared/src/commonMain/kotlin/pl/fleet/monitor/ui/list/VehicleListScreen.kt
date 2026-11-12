@@ -147,9 +147,6 @@ private fun VehicleRow(
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.width(8.dp))
-                    // Te same wskaźniki co na kafelku mapy: GSM, GPS, akumulator
-                    pl.fleet.monitor.ui.components.TelemetryIndicators(telemetry, batteryOk)
                 }
                 if (info.isNotEmpty()) {
                     Text(
@@ -158,20 +155,18 @@ private fun VehicleRow(
                     )
                 }
                 Spacer(Modifier.size(6.dp))
-                // Stan, prędkość (w jeździe), paliwo i czas ostatniej pozycji – w razie braku miejsca w dwóch wierszach
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    itemVerticalAlignment = Alignment.CenterVertically,
-                ) {
-                    StateBadge(v.state)
-                    if (v.state == pl.fleet.monitor.data.VehicleState.DRIVING) Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
-                    (v.fuelLiters ?: telemetry?.fuel)?.let { Meta(Icons.Outlined.LocalGasStation, "${Fmt.decimal(it, 0)} l") }
+                // Stan (w jeździe z prędkością) i czas ostatniej pozycji
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val driving = v.state == pl.fleet.monitor.data.VehicleState.DRIVING
+                    StateBadge(v.state, text = if (driving) "${v.state.shortLabel} · ${Fmt.speed(v.speed)}" else v.state.shortLabel)
                     Meta(
                         Icons.Outlined.Schedule, Fmt.ago(v.lastPositionTime),
                         warn = Fmt.isStale(v.lastPositionTime),
                     )
                 }
+                Spacer(Modifier.size(6.dp))
+                // Ten sam rząd chipów co na kafelku mapy: GSM, GPS, akumulator, paliwo
+                pl.fleet.monitor.ui.components.TelemetryChips(telemetry, batteryOk, fuel = v.fuelLiters ?: telemetry?.fuel)
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }

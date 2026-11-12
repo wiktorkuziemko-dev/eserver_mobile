@@ -336,22 +336,15 @@ private fun VehiclePreviewCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                // Zamiast powielonego stanu (opis jest niżej): sygnał GSM, GPS i napięcie akumulatora
-                pl.fleet.monitor.ui.components.TelemetryIndicators(telemetry, batteryOk)
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Zamknij") }
             }
             val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
             val driving = status?.motion ?: (v.state == VehicleState.DRIVING)
             // Paliwo: z pozycji, a gdy nadajnik podaje 0 – ostatni znany niezerowy odczyt.
             val fuel = v.fuelLiters ?: telemetry?.fuel
-            // Na postoju prędkość i obroty to zera – zostaje sam zegar paliwa.
-            if (!driving) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ArcGauge(
-                    fuel?.toFloat(), FUEL_MAX, fuel?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
-                    VehicleState.PARKED.color, Modifier.weight(1f),
-                )
-                Spacer(Modifier.weight(2f))
-            }
+            // Ten sam rząd chipów co na liście; paliwo jako chip tylko na postoju (w jeździe – zegar).
+            Spacer(Modifier.size(8.dp))
+            pl.fleet.monitor.ui.components.TelemetryChips(telemetry, batteryOk, fuel = if (driving) null else fuel)
             if (driving) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ArcGauge(v.speed.toFloat(), SPEED_MAX, v.speed.toString(), "km/h", VehicleState.DRIVING.color, Modifier.weight(1f))
                 ArcGauge(

@@ -155,7 +155,7 @@ fun VehicleEditDialog(vm: pl.fleet.monitor.ui.FleetViewModel, v: pl.fleet.monito
         currentIcon = ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
         currentLabel = ui.customLabels[v.deviceId].orEmpty(),
         currentThreshold = ui.batteryThreshold(v),
-        currentVoltage = ui.voltages[v.deviceId]?.volts,
+        currentVoltage = ui.telemetry[v.deviceId]?.volts,
         onSave = { icon, label, threshold ->
             vm.setAppearance(v.deviceId, icon, label)
             vm.setBatteryThreshold(v.deviceId, threshold)

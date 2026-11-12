@@ -40,11 +40,14 @@ class FleetRepository(
      * Ostatni odczyt napięcia akumulatora: najpierw z ostatnich 2 h (pojazd w ruchu raportuje często),
      * potem z ostatniej doby (na postoju nadajnik raportuje rzadko). null – brak odczytu.
      */
-    suspend fun latestVoltage(serial: String): VoltageReading? {
+    suspend fun latestTelemetry(serial: String): VehicleTelemetry? {
         val to = now()
         for (hours in listOf(2, 24)) {
-            routes(serial, to - hours.hours, to).lastOrNull { it.voltage != null && it.voltage > 0 }
-                ?.let { return VoltageReading(it.voltage!!, it.time) }
+            val p = routes(serial, to - hours.hours, to)
+            val last = p.lastOrNull() ?: continue
+            // Napięcie – ostatni niezerowy odczyt; sygnały – z ostatniego raportu.
+            val volts = p.lastOrNull { it.voltage != null && it.voltage > 0 }?.voltage
+            return VehicleTelemetry(volts, last.gsm, last.gps, last.time)
         }
         return null
     }

@@ -26,6 +26,10 @@ data class RoutePoint(
     val voltage: Double? = null,
     /** Obroty silnika [obr/min]. */
     val rpm: Double? = null,
+    /** Siła sygnału GSM (0–31). */
+    val gsm: Int? = null,
+    /** Siła sygnału GPS (0–31). */
+    val gps: Int? = null,
 )
 
 /** Postój: punkty [a]..[b], pozycja to średnia z tych punktów. */
@@ -463,5 +467,17 @@ fun RouteAnalysis.pointsKm(s: Int, e: Int): Double {
     return x
 }
 
-/** Odczyt napięcia akumulatora z raportu nadajnika. */
-data class VoltageReading(val volts: Double, val time: Instant)
+/** Stan nadajnika z ostatniego raportu: napięcie akumulatora i siła sygnałów GSM / GPS (0–31). */
+data class VehicleTelemetry(val volts: Double?, val gsm: Int?, val gps: Int?, val time: Instant)
+
+/**
+ * Siła sygnału 0–31 przeliczona na 0–4 kreski, jak w telefonie (skala CSQ modemów GSM):
+ * 0–2 brak, 3–9 jedna, 10–14 dwie, 15–19 trzy, 20 i więcej – cztery.
+ */
+fun signalBars(level: Int?): Int = when {
+    level == null || level <= 2 -> 0
+    level <= 9 -> 1
+    level <= 14 -> 2
+    level <= 19 -> 3
+    else -> 4
+}

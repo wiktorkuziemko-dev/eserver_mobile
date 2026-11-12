@@ -197,6 +197,8 @@ fun MapScreen(
                     v,
                     name = ui.nameOf(v),
                     info = ui.infoOf(v),
+                    telemetry = ui.telemetry[v.deviceId],
+                    batteryOk = ui.batteryOk(v),
                     following = ui.followId == v.deviceId,
                     preview = ui.preview?.takeIf { it.deviceId == v.deviceId },
                     onFollow = { vm.follow(v.deviceId) },
@@ -308,6 +310,8 @@ private fun VehiclePreviewCard(
     v: Vehicle,
     name: String,
     info: String,
+    telemetry: pl.fleet.monitor.data.VehicleTelemetry?,
+    batteryOk: Boolean?,
     following: Boolean,
     preview: pl.fleet.monitor.ui.PreviewInfo?,
     onFollow: () -> Unit,
@@ -332,12 +336,20 @@ private fun VehiclePreviewCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                StateBadge(v.state, text = v.state.label)
+                // Zamiast powielonego stanu (opis jest niżej): sygnał GSM, GPS i napięcie akumulatora
+                pl.fleet.monitor.ui.components.TelemetryIndicators(telemetry, batteryOk)
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, "Zamknij") }
             }
             val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
             val driving = status?.motion ?: (v.state == VehicleState.DRIVING)
-            // Na postoju zegary pokazywałyby same zera – pomijamy je.
+            // Na postoju prędkość i obroty to zera – zostaje sam zegar paliwa.
+            if (!driving) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ArcGauge(
+                    v.fuelLiters?.toFloat(), FUEL_MAX, v.fuelLiters?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
+                    VehicleState.PARKED.color, Modifier.weight(1f),
+                )
+                Spacer(Modifier.weight(2f))
+            }
             if (driving) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ArcGauge(v.speed.toFloat(), SPEED_MAX, v.speed.toString(), "km/h", VehicleState.DRIVING.color, Modifier.weight(1f))
                 ArcGauge(

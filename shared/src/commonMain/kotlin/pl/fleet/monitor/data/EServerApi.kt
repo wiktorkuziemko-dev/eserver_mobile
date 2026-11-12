@@ -164,6 +164,8 @@ class EServerApi(
                 event = (o["i_event"] as? JsonPrimitive)?.contentOrNull?.trim()?.lastOrNull()?.uppercaseChar()?.takeIf { it == 'S' || it == 'T' },
                 voltage = o["voltage"].asDouble(), // „12,39” – przecinek dziesiętny
                 rpm = o["rpm"].asDouble(),
+                gsm = o["gsm_level"].asDouble()?.toInt(),
+                gps = o["gps_level"].asDouble()?.toInt(),
             )
         }
         return cleanRoutePoints(raw)

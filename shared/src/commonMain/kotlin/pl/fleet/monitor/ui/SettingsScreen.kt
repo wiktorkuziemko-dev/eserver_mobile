@@ -161,7 +161,7 @@ fun SettingsScreen(vm: FleetViewModel, onOpenVisibility: () -> Unit, modifier: M
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.BatteryAlert, null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(pl.fleet.monitor.ui.components.CarBatteryIcon, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.size(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Informuj o niskim stanie akumulatora", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)

@@ -41,7 +41,7 @@ data class FleetUiState(
     val keepScreenOn: Boolean = true,
     val showRouteLegend: Boolean = true,
     /** Ostatnie napięcie akumulatora pojazdów (deviceId → odczyt). */
-    val voltages: Map<String, pl.fleet.monitor.data.VoltageReading> = emptyMap(),
+    val telemetry: Map<String, pl.fleet.monitor.data.VehicleTelemetry> = emptyMap(),
     /** Własne progi krytycznego napięcia (deviceId → V). */
     val batteryThresholds: Map<String, Double> = emptyMap(),
     val batteryAlerts: Boolean = false,
@@ -52,6 +52,10 @@ data class FleetUiState(
 ) {
     /** Główna nazwa pojazdu wszędzie w aplikacji: opis własny z ustawień, a bez niego nazwa z systemu (deviceName). */
     fun nameOf(v: Vehicle): String = vehicleName(v, customLabels[v.deviceId])
+
+    /** Ocena napięcia akumulatora: null, gdy ostrzeganie wyłączone albo brak odczytu; true – w normie. */
+    fun batteryOk(v: Vehicle): Boolean? =
+        if (!batteryAlerts) null else telemetry[v.deviceId]?.volts?.let { it >= batteryThreshold(v) }
 
     /** Krytyczny próg napięcia akumulatora pojazdu [V]. */
     fun batteryThreshold(v: Vehicle): Double =
@@ -128,13 +132,13 @@ class FleetViewModel : ViewModel() {
         lastVoltageRefresh = now()
         for (v in list) {
             val r = try {
-                repo.latestVoltage(v.serial)
+                repo.latestTelemetry(v.serial)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 null
             }
-            if (r != null) _ui.update { it.copy(voltages = it.voltages + (v.deviceId to r)) }
+            if (r != null) _ui.update { it.copy(telemetry = it.telemetry + (v.deviceId to r)) }
         }
     }
     private val activityCache = mutableMapOf<String, Pair<Boolean, Instant?>>()

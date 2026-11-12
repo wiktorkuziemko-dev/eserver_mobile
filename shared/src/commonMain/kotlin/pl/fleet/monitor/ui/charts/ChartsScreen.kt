@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,18 @@ fun ChartsScreen(vehicleName: String, title: String, vm: ChartsViewModel, onBack
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    if (ui.axis.segments.isEmpty()) {
+                        Text("W tym okresie pojazd nie jechał – brak danych do wykresów.", style = MaterialTheme.typography.bodyMedium)
+                        return@Column
+                    }
+                    // Oś czasu złożona z samych okresów jazdy – postoje pominięte
+                    Text(
+                        "Jazda ${Fmt.duration(ui.axis.drivingSeconds)} · ${ui.axis.segments.size} " +
+                            (if (ui.axis.segments.size == 1) "trasa" else if (ui.axis.segments.size in 2..4) "trasy" else "tras") +
+                            " – postoje pominięte, kreski oddzielają kolejne trasy",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     Text(
                         if (ui.cursor != null) "Wybrana chwila: ${hms(ui.cursor!!)} – dotknij wykresu, aby zmienić"
                         else "Dotknij wykresu lub przesuń palcem, aby odczytać wartości w danej chwili",
@@ -78,10 +91,10 @@ fun ChartsScreen(vehicleName: String, title: String, vm: ChartsViewModel, onBack
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     // Prędkość i obroty: zaznaczone maksimum; napięcie i paliwo: maksimum i minimum.
-                    ChartCard("Prędkość", "km/h", 0, ui.speed, SPEED_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = true, showMin = false)
-                    ChartCard("Obroty silnika", "obr/min", 0, ui.rpm, RPM_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = true, showMin = false)
-                    ChartCard("Napięcie akumulatora", "V", 2, ui.voltage, VOLTAGE_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = false, showMin = true)
-                    ChartCard("Paliwo", "l", 1, ui.fuel, FUEL_COLOR, vm.from, vm.to, ui.cursor, vm::setCursor, zeroBased = false, showMin = true)
+                    ChartCard("Prędkość", "km/h", 0, ui.speed, SPEED_COLOR, ui.axis, ui.cursor, vm::setCursor, zeroBased = true, showMin = false)
+                    ChartCard("Obroty silnika", "obr/min", 0, ui.rpm, RPM_COLOR, ui.axis, ui.cursor, vm::setCursor, zeroBased = true, showMin = false)
+                    ChartCard("Napięcie akumulatora", "V", 2, ui.voltage, VOLTAGE_COLOR, ui.axis, ui.cursor, vm::setCursor, zeroBased = false, showMin = true)
+                    ChartCard("Paliwo", "l", 1, ui.fuel, FUEL_COLOR, ui.axis, ui.cursor, vm::setCursor, zeroBased = false, showMin = true)
                     Spacer(Modifier.height(16.dp))
                 }
             }
@@ -96,8 +109,7 @@ private fun ChartCard(
     decimals: Int,
     series: Series,
     color: Color,
-    from: Instant,
-    to: Instant,
+    axis: TimeAxis,
     cursor: Instant?,
     onCursor: (Instant?) -> Unit,
     zeroBased: Boolean,
@@ -148,12 +160,21 @@ private fun ChartCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                LineChart(series, color, from, to, lo, hi, cursor, onCursor, marks, Modifier.weight(1f).height(130.dp))
+                LineChart(series, color, axis, lo, hi, cursor, onCursor, marks, Modifier.weight(1f).height(130.dp))
             }
-            // Oś X: początek, środek i koniec okresu
-            Row(Modifier.fillMaxWidth().padding(start = 42.dp, top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                listOf(from, from + (to - from) / 2, to).forEach {
-                    Text(hm(it), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Oś X: godziny początku kolejnych tras (bez nakładania się podpisów) i koniec ostatniej
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 42.dp, top = 2.dp).height(16.dp)) {
+                val width = maxWidth
+                var lastX = -100.dp
+                axis.starts.forEach { (f, t) ->
+                    val x = width * f
+                    if (x - lastX >= 44.dp && x <= width - 40.dp) {
+                        Text(hm(t), Modifier.offset(x = x), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        lastX = x
+                    }
+                }
+                axis.segments.lastOrNull()?.let { (_, end) ->
+                    Text(hm(end), Modifier.align(Alignment.TopEnd), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -164,8 +185,7 @@ private fun ChartCard(
 private fun LineChart(
     series: Series,
     color: Color,
-    from: Instant,
-    to: Instant,
+    axis: TimeAxis,
     lo: Double,
     hi: Double,
     cursor: Instant?,
@@ -178,18 +198,22 @@ private fun LineChart(
     val labelStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
     val labelBg = MaterialTheme.colorScheme.surface
     val ink = MaterialTheme.colorScheme.onSurface
-    val total = (to - from).inWholeMilliseconds.coerceAtLeast(1)
-    fun timeAt(x: Float, width: Float): Instant = from + (to - from) * (x / width).coerceIn(0f, 1f).toDouble()
+    fun timeAt(x: Float, width: Float): Instant? = axis.timeAt(x / width)
     Canvas(
         modifier
-            .pointerInput(from, to) { detectTapGestures { onCursor(timeAt(it.x, size.width.toFloat())) } }
-            .pointerInput(from, to) {
+            .pointerInput(axis) { detectTapGestures { onCursor(timeAt(it.x, size.width.toFloat())) } }
+            .pointerInput(axis) {
                 detectHorizontalDragGestures { change, _ -> onCursor(timeAt(change.position.x, size.width.toFloat())) }
             },
     ) {
         val w = size.width
         val h = size.height
-        fun x(t: Instant) = ((t - from).inWholeMilliseconds.toFloat() / total) * w
+        fun x(t: Instant) = (axis.fraction(t) ?: 0f) * w
+        // Linie podziału między kolejnymi trasami (postoje pominięte)
+        axis.starts.drop(1).forEach { (f, _) ->
+            drawLine(grid, Offset(f * w, 0f), Offset(f * w, h), strokeWidth = 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
+        }
         fun y(v: Double) = (h - ((v - lo) / (hi - lo)).toFloat() * h)
         // Delikatna siatka: góra, środek, dół
         listOf(0f, h / 2, h).forEach { gy ->
@@ -204,7 +228,8 @@ private fun LineChart(
             if (v == null) { open = false; continue }
             val px = x(t)
             val py = y(v)
-            val gap = prev?.let { (t - it).inWholeSeconds > GAP_SECONDS } ?: true
+            // Nowa trasa albo długa luka w danych – linia zaczyna się od nowa
+            val gap = prev?.let { (t - it).inWholeSeconds > GAP_SECONDS || axis.segmentOf(it) != axis.segmentOf(t) } ?: true
             if (!open || gap) path.moveTo(px, py) else path.lineTo(px, py)
             open = true
             prev = t

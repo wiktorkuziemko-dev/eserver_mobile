@@ -1,9 +1,7 @@
 package pl.fleet.monitor.ui.list
 
-import androidx.compose.material.icons.filled.BatteryAlert
-import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -105,9 +103,9 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
                     items(ui.filtered, key = { it.deviceId }) { v ->
                         VehicleRow(
                             v, ui.nameOf(v), ui.infoOf(v), ui.icons[v.deviceId] ?: VehicleIcon.DEFAULT,
-                            voltage = ui.voltages[v.deviceId]?.volts,
+                            telemetry = ui.telemetry[v.deviceId],
                             // Kolor tylko z włączonym „Informuj o niskim stanie akumulatora”
-                            voltageOk = if (ui.batteryAlerts) ui.voltages[v.deviceId]?.let { it.volts >= ui.batteryThreshold(v) } else null,
+                            batteryOk = ui.batteryOk(v),
                             onClick = { onOpenVehicle(v.deviceId) },
                         )
                     }
@@ -117,14 +115,15 @@ fun VehicleListScreen(vm: FleetViewModel, ui: FleetUiState, onOpenVehicle: (Stri
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun VehicleRow(
     v: Vehicle,
     name: String,
     info: String,
     icon: VehicleIcon,
-    voltage: Double?,
-    voltageOk: Boolean?,
+    telemetry: pl.fleet.monitor.data.VehicleTelemetry?,
+    batteryOk: Boolean?,
     onClick: () -> Unit,
 ) {
     Card(
@@ -149,7 +148,8 @@ private fun VehicleRow(
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.width(8.dp))
-                    StateBadge(v.state)
+                    // Te same wskaźniki co na kafelku mapy: GSM, GPS, akumulator
+                    pl.fleet.monitor.ui.components.TelemetryIndicators(telemetry, batteryOk)
                 }
                 if (info.isNotEmpty()) {
                     Text(
@@ -158,15 +158,15 @@ private fun VehicleRow(
                     )
                 }
                 Spacer(Modifier.size(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
-                    if (voltage != null) {
-                        if (voltageOk == null) {
-                            Meta(Icons.Outlined.BatteryChargingFull, "${Fmt.decimal(voltage, 1)} V")
-                        } else {
-                            BatteryBadge(voltage, voltageOk)
-                        }
-                    }
+                // Stan, prędkość (w jeździe), paliwo i czas ostatniej pozycji – w razie braku miejsca w dwóch wierszach
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    StateBadge(v.state)
+                    if (v.state == pl.fleet.monitor.data.VehicleState.DRIVING) Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
+                    v.fuelLiters?.let { Meta(Icons.Outlined.LocalGasStation, "${Fmt.decimal(it, 0)} l") }
                     Meta(
                         Icons.Outlined.Schedule, Fmt.ago(v.lastPositionTime),
                         warn = Fmt.isStale(v.lastPositionTime),
@@ -176,25 +176,6 @@ private fun VehicleRow(
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
-    }
-}
-
-/** Plakietka akumulatora (gdy włączone ostrzeganie): zielona powyżej progu, czerwona z wykrzyknikiem poniżej. */
-@Composable
-private fun BatteryBadge(volts: Double, ok: Boolean) {
-    val bg = if (ok) Color(0xFFE6F4E9) else Color(0xFFFDE2E1)
-    val fg = if (ok) Color(0xFF1B6B2C) else Color(0xFFB3261E)
-    Row(
-        Modifier.background(bg, androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .padding(start = 6.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(if (ok) Icons.Filled.BatteryFull else Icons.Filled.BatteryAlert, null, Modifier.size(14.dp), tint = fg)
-        Spacer(Modifier.width(3.dp))
-        Text(
-            if (ok) "${Fmt.decimal(volts, 1)} V" else "${Fmt.decimal(volts, 1)} V · niski",
-            style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = fg,
-        )
     }
 }
 

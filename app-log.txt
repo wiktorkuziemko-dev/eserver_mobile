@@ -1,0 +1,219 @@
+Timestamp               Ty Process[PID:TID]
+2026-11-12 10:56:26.685 Df iosApp[30442:1434f] [com.apple.xpc:connection] [0x103704f70] activating connection: mach=true listener=false peer=false name=com.apple.cfprefsd.daemon
+2026-11-12 10:56:26.687 Df iosApp[30442:14342] (libMobileGestalt.dylib) No persisted cache on this platform.
+2026-11-12 10:56:26.732 Df iosApp[30442:14353] [com.apple.BoardServices:XPCErrors] [C:1] Alloc com.apple.frontboard.systemappservices
+2026-11-12 10:56:26.732 Df iosApp[30442:1434f] [com.apple.UIKit:BackgroundTask] Creating new assertion because there is no existing background assertion.
+2026-11-12 10:56:26.732 Df iosApp[30442:14353] [com.apple.xpc:connection] [0x103707000] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-11-12 10:56:26.732 Df iosApp[30442:1434f] [com.apple.UIKit:BackgroundTask] Creating new background assertion
+2026-11-12 10:56:26.732 Df iosApp[30442:1434f] [com.apple.UIKit:BackgroundTask] Created new background assertion <BKSProcessAssertion: 0x6000021012c0>
+2026-11-12 10:56:26.746 Df iosApp[30442:1434f] [com.apple.runningboard:connection] Initializing connection
+2026-11-12 10:56:26.746 Df iosApp[30442:1434f] [com.apple.runningboard:process] Removing all cached process handles
+2026-11-12 10:56:26.746 Df iosApp[30442:1434f] [com.apple.runningboard:connection] Creating connection to com.apple.runningboard
+2026-11-12 10:56:26.746 Df iosApp[30442:1434f] [com.apple.xpc:connection] [0x103707740] activating connection: mach=true listener=false peer=false name=com.apple.runningboard
+2026-11-12 10:56:26.747 Df iosApp[30442:14355] [com.apple.runningboard:connection] Sending handshake request attempt #1 to server
+2026-11-12 10:56:26.751 Df iosApp[30442:14355] [com.apple.runningboard:connection] Handshake succeeded
+2026-11-12 10:56:26.751 Df iosApp[30442:14355] [com.apple.runningboard:connection] Identity resolved as app<pl.fleet.monitor((null))>
+2026-11-12 10:56:26.753 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason added: 10; deactivation reasons: 0 -> 1024; animating application lifecycle event: 0
+2026-11-12 10:56:26.753 Df iosApp[30442:14342] [com.apple.BoardServices:Injection] activating monitor for service com.apple.frontboard.open
+2026-11-12 10:56:26.753 Df iosApp[30442:14342] [com.apple.BoardServices:Injection] activating monitor for service com.apple.frontboard.workspace-service
+2026-11-12 10:56:26.753 Df iosApp[30442:1434f] [com.apple.UIKit:BackgroundTask] Incrementing reference count for background assertion <BKSProcessAssertion: 0x6000021012c0>
+2026-11-12 10:56:26.754 Df iosApp[30442:1434f] [com.apple.UIKit:BackgroundTask] Created background task <_UIBackgroundTaskInfo: 0x6000017098c0>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 1168 (elapsed = 0).
+2026-11-12 10:56:26.754 Df iosApp[30442:14342] [com.apple.FrontBoard:Common] FBSWorkspace registering source: com.apple.frontboard.systemappservices
+2026-11-12 10:56:26.754 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UIApplicationSceneKeyboardSettings on FBSSceneSettings
+2026-11-12 10:56:26.756 Df iosApp[30442:14342] [com.apple.FrontBoard:Common] FBSWorkspace connected to endpoint : <BSServiceConnectionEndpoint: 0x60000020aa60; target: com.apple.frontboard.systemappservices; service: com.apple.frontboard.workspace-service>
+2026-11-12 10:56:26.756 Df iosApp[30442:14342] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600003004510 com.apple.frontboard.systemappservices> attempting immediate handshake from activate
+2026-11-12 10:56:26.756 Df iosApp[30442:14342] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600003004510 com.apple.frontboard.systemappservices> sent handshake
+2026-11-12 10:56:26.756 Df iosApp[30442:14342] [com.apple.runningboard:general] Added observer for process assertions expiration warning: <_RBSExpirationWarningClient: 0x600000214380>
+2026-11-12 10:56:26.784 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneOcclusionSettings> on FBSSceneSettings
+2026-11-12 10:56:26.784 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneInterfaceProtectionSettings> on FBSSceneSettings
+2026-11-12 10:56:26.784 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneLayoutPreferencesHostSettingsExtension on FBSSceneSettings
+2026-11-12 10:56:26.786 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneSafeAreaSettingsExtension on FBSSceneSettings
+2026-11-12 10:56:26.786 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneLayoutPreferenceClientSettingsExtension on FBSSceneClientSettings
+2026-11-12 10:56:26.787 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UIHomeAffordanceHostSceneSettings> on FBSSceneSettings
+2026-11-12 10:56:26.787 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISystemShellSceneHostingEnvironmentSettings on FBSSceneSettings
+2026-11-12 10:56:26.788 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneRenderingEnvironmentSettings on FBSSceneSettings
+2026-11-12 10:56:26.788 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneRenderingEnvironmentClientSettings> on FBSSceneClientSettings
+2026-11-12 10:56:26.789 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneTransitioningHostSettings> on FBSSceneSettings
+2026-11-12 10:56:26.789 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneFocusSystemSettings> on FBSSceneSettings
+2026-11-12 10:56:26.789 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneOrientationSettingsExtension on FBSSceneSettings
+2026-11-12 10:56:26.789 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneOrientationClientSettingsExtension on FBSSceneClientSettings
+2026-11-12 10:56:26.789 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneWindowingControlClientSettings on FBSSceneClientSettings
+2026-11-12 10:56:26.789 Df iosApp[30442:14342] [com.apple.UIKit:UIScreen] Evaluated capturing state as 0 on <UIScreen: 0x103505f70> for initial
+2026-11-12 10:56:26.789 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingContentSizePreferenceClientSettings> on FBSSceneClientSettings
+2026-11-12 10:56:26.790 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneHostingTraitCollectionPropagationSettings on FBSSceneSettings
+2026-11-12 10:56:26.790 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingSheetPresentationSettings> on FBSSceneSettings
+2026-11-12 10:56:26.790 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingSheetPresentationClientSettings> on FBSSceneClientSettings
+2026-11-12 10:56:26.790 Df iosApp[30442:14342] [com.apple.UIKit:UIScreen] Evaluated capturing state as 0 on <UIScreen: 0x103505f70> for CADisplay KVO
+2026-11-12 10:56:26.792 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingEventDeferringSettings> on FBSSceneSettings
+2026-11-12 10:56:26.792 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <UIKit__UITypedKeyValueSceneSettings> on FBSSceneSettings
+2026-11-12 10:56:26.792 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <UIKit__UITypedKeyValueSceneSettings> on FBSSceneClientSettings
+2026-11-12 10:56:26.792 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingViewControllerPreferencePropagationClientSettings> on FBSSceneClientSettings
+2026-11-12 10:56:26.792 Df iosApp[30442:1434f] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneZoomTransitionSettings> on FBSSceneSettings
+2026-11-12 10:56:26.801 Df iosApp[30442:14342] [com.apple.Accessibility:AXSupportCommon] Read CategoryName: per-app = 1, category name = (null)
+2026-11-12 10:56:26.813 Df iosApp[30442:14358] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneSettingsCore on FBSSceneSettings
+2026-11-12 10:56:26.815 Df iosApp[30442:14358] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneClientSettingsCore on FBSSceneClientSettings
+2026-11-12 10:56:26.815 Df iosApp[30442:14342] [com.apple.Accessibility:AXSupportCommon] Read CategoryName: per-app = 0, category name = (null)
+2026-11-12 10:56:26.827 Df iosApp[30442:14342] [com.apple.dt.xctest:Default] Registering for test daemon availability notify post.
+2026-11-12 10:56:26.829 Df iosApp[30442:14342] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-11-12 10:56:26.831 Df iosApp[30442:14342] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-11-12 10:56:26.837 Df iosApp[30442:14342] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-11-12 10:56:26.840 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason added: 11; deactivation reasons: 1024 -> 3072; animating application lifecycle event: 0
+2026-11-12 10:56:26.842 Df iosApp[30442:14358] [com.apple.FrontBoard:SceneExtension] UIMutableApplicationSceneSettings setting counterpart class: UIApplicationSceneSettings
+2026-11-12 10:56:26.842 Df iosApp[30442:14358] [com.apple.FrontBoard:SceneExtension] UIMutableApplicationSceneClientSettings setting counterpart class: UIApplicationSceneClientSettings
+2026-11-12 10:56:26.843 Df iosApp[30442:14358] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneTransitionContextCore on FBSSceneTransitionContext
+2026-11-12 10:56:26.854 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason removed: 10; deactivation reasons: 3072 -> 2048; animating application lifecycle event: 0
+2026-11-12 10:56:26.855 Df iosApp[30442:14342] [com.apple.UIKit:EventBus] Event Timing Profile for Touch: not found, path="/System/Library/EventTimingProfiles/Sim.Touch.plist"
+2026-11-12 10:56:26.855 Df iosApp[30442:14342] [com.apple.UIKit:EventBus] Event Timing Profile for Pencil: not found, path="/System/Library/EventTimingProfiles/Sim.Pencil.plist"
+2026-11-12 10:56:26.855 Df iosApp[30442:14342] [com.apple.UIKit:UpdateScheduler] Selected display: name=LCD (PurpleMain), id=1
+2026-11-12 10:56:26.858 A  iosApp[30442:14355] (RunningBoardServices) didChangeInheritances
+2026-11-12 10:56:26.861 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10370b030] activating connection: mach=true listener=false peer=false name=com.apple.lsd.mapdb
+2026-11-12 10:56:26.863 A  iosApp[30442:14352] (CoreFoundation) Loading Preferences From User Session CFPrefsD
+2026-11-12 10:56:27.278 Df iosApp[30442:14342] [com.apple.BoardServices:XPCErrors] [C:2] Alloc com.apple.backboard.hid-services.xpc
+2026-11-12 10:56:27.278 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10370a200] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-11-12 10:56:27.279 Df iosApp[30442:14353] [com.apple.BackBoard:EventDelivery] BKSHIDEventDeliveryManager - connection activation
+2026-11-12 10:56:27.292 Df iosApp[30442:14342] [com.apple.UIKit:BackgroundTask] Will add backgroundTask with taskName: Persistent SceneSession Map Update, expirationHandler: <__NSGlobalBlock__: 0x1e61729e0>
+2026-11-12 10:56:27.293 Df iosApp[30442:14342] [com.apple.UIKit:BackgroundTask] Reusing background assertion <BKSProcessAssertion: 0x6000021012c0>
+2026-11-12 10:56:27.293 Df iosApp[30442:14342] [com.apple.UIKit:BackgroundTask] Incrementing reference count for background assertion <BKSProcessAssertion: 0x6000021012c0>
+2026-11-12 10:56:27.293 Df iosApp[30442:14342] [com.apple.UIKit:BackgroundTask] Created background task <_UIBackgroundTaskInfo: 0x600001705f80>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 1169 (elapsed = 0).
+2026-11-12 10:56:27.293 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason added: 5; deactivation reasons: 2048 -> 2080; animating application lifecycle event: 1
+2026-11-12 10:56:27.293 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Should send trait collection or coordinate space update, interface style 1 -> 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.294 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.295 Df iosApp[30442:14342] [com.apple.UIKit:HomeAffordanceObservation] Initializing: <_UIHomeAffordanceSceneNotifier: 0x60000290cf50>; with scene: <UIWindowScene: 0x103607930>
+2026-11-12 10:56:27.295 Df iosApp[30442:14342] [com.apple.BacklightServices:scenes] 0x600000c18f90 setDelegate:<0x600000c063d0 _UIBacklightEnvironment> hasDelegate:YES for environment:sceneID:pl.fleet.monitor-default
+2026-11-12 10:56:27.298 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.298 Df iosApp[30442:14342] [com.apple.UIKit:EventDeferring] [0x60000290cc40] Initialized with scene: <UIWindowScene: 0x103607930>; behavior: <_UIEventDeferringBehavior_iOS: 0x600000221220>; availableForProcess: 1, systemShellManagesKeyboardFocus: 1
+2026-11-12 10:56:27.300 Df iosApp[30442:14353] [com.apple.BackBoard:EventDelivery] BKSHIDEventObserver - connection activation
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x60000260cfc0; process scope; status: target> was:none
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPhone to LastOneWins
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Scene target of keyboard event deferring environment did change: 1; scene: UIWindowScene: 0x103607930; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Apl.fleet.monitor-default
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:EventDeferring] [0x60000290cc40] Scene target of event deferring environments did update: scene: 0x103607930; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x103607930; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Apl.fleet.monitor-default
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Stack[KeyWindow] 0x600000c06760: Taking no further action for migration from LastOneWins -> SystemShellManaged as there are no scenes
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPhone to SystemShellManaged
+2026-11-12 10:56:27.300 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Key window needs update: 0; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x103607930; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x0; reason: UIWindowScene: 0x103607930: Window scene became target of keyboard environment
+2026-11-12 10:56:27.301 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.301 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.302 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.404 Df iosApp[30442:14342] [com.apple.UIKit:Orientation] <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7) Scene updated orientation preferences: none -> ( Pu )
+2026-11-12 10:56:27.405 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Key window API is scene-level: YES
+2026-11-12 10:56:27.405 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] UIWindowScene: 0x103607930: Window became key in scene: UIWindow: 0x1036087f0; contextId: 0x6AA1888C: reason: UIWindowScene: 0x103607930: Window requested to become key in scene: 0x1036087f0
+2026-11-12 10:56:27.405 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Key window needs update: 1; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x103607930; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x1036087f0; reason: UIWindowScene: 0x103607930: Window requested to become key in scene: 0x1036087f0
+2026-11-12 10:56:27.405 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Window did become application key: UIWindow: 0x1036087f0; contextId: 0x6AA1888C; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Apl.fleet.monitor-default
+2026-11-12 10:56:27.405 Df iosApp[30442:14342] [com.apple.UIKit:EventDeferring] [0x60000290cc40] Begin local event deferring requested for token: 0x600002604420; environments: 1; reason: UIWindowScene: 0x103607930: Begin event deferring in keyboardFocus for window: 0x1036087f0
+2026-11-12 10:56:27.406 Df iosApp[30442:14353] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x60000260cfc0; token: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Apl.fleet.monitor-default; status: ancestor> was:target
+2026-11-12 10:56:27.408 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.410 Df iosApp[30442:14342] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:pl.fleet.monitor-default  persistentID: A51F8031-1D16-4FC2-8909-6700A015E5F7
+2026-11-12 10:56:27.411 Df iosApp[30442:14342] [com.apple.UIKit:Application] Ignoring already applied deactivation reason: 5; deactivation reasons: 2080
+2026-11-12 10:56:27.411 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason added: 12; deactivation reasons: 2080 -> 6176; animating application lifecycle event: 1
+2026-11-12 10:56:27.411 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason removed: 11; deactivation reasons: 6176 -> 4128; animating application lifecycle event: 1
+2026-11-12 10:56:27.411 Df iosApp[30442:14342] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneIntelligenceSupportSettings> on FBSSceneSettings
+2026-11-12 10:56:27.413 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:27.413 Df iosApp[30442:14353] [com.apple.UIIntelligenceSupport:xpc] establishing connection to agent
+2026-11-12 10:56:27.413 Df iosApp[30442:14353] [com.apple.xpc:session] [0x6000021132f0] Session created.
+2026-11-12 10:56:27.413 Df iosApp[30442:14353] [com.apple.xpc:session] [0x6000021132f0] Session created from connection [0x103713800]
+2026-11-12 10:56:27.414 Df iosApp[30442:14353] [com.apple.xpc:connection] [0x103713800] activating connection: mach=true listener=false peer=false name=com.apple.uiintelligencesupport.agent
+2026-11-12 10:56:27.414 Df iosApp[30442:14353] [com.apple.xpc:session] [0x6000021132f0] Session activated
+2026-11-12 10:56:27.429 A  iosApp[30442:14342] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-11-12 10:56:27.494 A  iosApp[30442:14342] (Security) SecItemCopyMatching_ios
+2026-11-12 10:56:27.494 Df iosApp[30442:14342] [com.apple.securityd:secitemratelimit] Not internal release, disabling SIRL
+2026-11-12 10:56:27.496 Df iosApp[30442:14342] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-11-12 10:56:27.496 Df iosApp[30442:14342] [com.apple.securityd:keychain] System Keychain Always Supported set via feature flag to disabled
+2026-11-12 10:56:27.496 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10350c9d0] activating connection: mach=true listener=false peer=false name=com.apple.securityd
+2026-11-12 10:56:27.498 A  iosApp[30442:14342] (Security) SecItemCopyMatching_ios
+2026-11-12 10:56:27.565 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x103713e10] activating connection: mach=true listener=false peer=false name=com.apple.metal.simulator
+2026-11-12 10:56:27.567 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x103612100] activating connection: mach=true listener=false peer=false name=com.apple.metal.simulator
+2026-11-12 10:56:27.567 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x103715ed0] activating connection: mach=true listener=false peer=false name=com.apple.metal.simulator
+2026-11-12 10:56:27.621 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] Reloading input views for key-window scene responder: <Sharedandroidx.compose.ui.window.OverlayInputView9: 0x10404d000; baseClass = UIScrollView; frame = (0 0; 0 0); > force:N
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _reloadInputViewsForKeyWindowSceneResponder: 1 force: 0, fromBecomeFirstResponder: 1 (automaticKeyboard: 1, reloadIdentifier: 9F71D5ED-7CEA-48C6-94C0-B434C0728C44)
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder: <Sharedandroidx.compose.ui.window.OverlayInputView9: 0x10404d000; baseClass = UIScrollView; frame = (0 0; 0 0); >, automaticKeyboard: 1, force: 0
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder, found custom inputView: <(null): 0x0>, customInputViewController: <(null): 0x0>
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder, found inputAccessoryView: <(null): 0x0>
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder, responderRequiresKeyboard 0 (automaticKeyboardEnabled: 1, activeInstance: <(null): 0x0>, self.isOnScreen: 0, requiresKBWhenFirstResponder: 0)
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder, useKeyboard 0 (allowsSystemInputView: 1, !inputView <(null): 0x0>, responderRequiresKeyboard 0)
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder, configuring _responderWithoutAutomaticAppearanceEnabled: <(null): 0x0> (_automaticAppearEnabled: 1)
+2026-11-12 10:56:27.623 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder, needsIVPlaceholder: 0, needsIAVPlaceholder: 0, needsInputSetWithPlaceholder: 0
+2026-11-12 10:56:27.624 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardSceneDelegate] _inputViewsForResponder returning: <<UIInputViewSet: 0x600003701740>; (empty)>
+2026-11-12 10:56:27.656 Df iosApp[30442:14353] [com.apple.xpc:connection] [0x1037163b0] activating connection: mach=true listener=false peer=false name=com.apple.fontservicesd
+2026-11-12 10:56:27.733 A  iosApp[30442:14342] (Security) SecItemCopyMatching_ios
+2026-11-12 10:56:27.734 A  iosApp[30442:14342] (Security) SecItemCopyMatching_ios
+2026-11-12 10:56:27.794 Df iosApp[30442:14353] [com.apple.UIKit:BackgroundTask] Ending background task with UIBackgroundTaskIdentifier: 1
+2026-11-12 10:56:27.794 Df iosApp[30442:14353] [com.apple.UIKit:BackgroundTask] Ending task with identifier 1 and description: <_UIBackgroundTaskInfo: 0x6000017098c0>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 1168 (elapsed = 1), _expireHandler: (null)
+2026-11-12 10:56:27.794 Df iosApp[30442:14353] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x6000021012c0> (used by background task with identifier 1: <_UIBackgroundTaskInfo: 0x6000017098c0>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 1168 (elapsed = 1))
+2026-11-12 10:56:27.795 Df iosApp[30442:14357] [com.apple.UIKit:BackgroundTask] Ending background task with UIBackgroundTaskIdentifier: 2
+2026-11-12 10:56:27.795 Df iosApp[30442:14357] [com.apple.UIKit:BackgroundTask] Ending task with identifier 2 and description: <_UIBackgroundTaskInfo: 0x600001705f80>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 1169 (elapsed = 0), _expireHandler: <__NSGlobalBlock__: 0x1e61729e0>
+2026-11-12 10:56:27.795 Df iosApp[30442:14357] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x6000021012c0> (used by background task with identifier 2: <_UIBackgroundTaskInfo: 0x600001705f80>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 1169 (elapsed = 0))
+2026-11-12 10:56:27.795 Df iosApp[30442:14357] [com.apple.UIKit:BackgroundTask] Will invalidate assertion: <BKSProcessAssertion: 0x6000021012c0> for task identifier: 2
+2026-11-12 10:56:27.883 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10371de90] activating connection: mach=true listener=false peer=false name=com.apple.pasteboard.pasted
+2026-11-12 10:56:27.954 A  iosApp[30442:14352] (RunningBoardServices) didChangeInheritances
+2026-11-12 10:56:28.047 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10352a370] activating connection: mach=true listener=false peer=false name=com.apple.IOSurface.Remote
+2026-11-12 10:56:28.074 E  iosApp[30442:14342] (libCoreFSCache.dylib) fopen failed for data file: errno = 2 (No such file or directory)
+2026-11-12 10:56:28.074 E  iosApp[30442:14342] (libCoreFSCache.dylib) Errors found! Invalidating cache...
+2026-11-12 10:56:28.075 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10373b730] activating connection: mach=false listener=false peer=false name=com.apple.MTLCompilerService
+2026-11-12 10:56:28.110 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10370b5d0] activating connection: mach=false listener=false peer=false name=com.apple.MTLCompilerService
+2026-11-12 10:56:28.110 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.169 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.206 E  iosApp[30442:14342] (libCoreFSCache.dylib) fopen failed for data file: errno = 2 (No such file or directory)
+2026-11-12 10:56:29.206 E  iosApp[30442:14342] (libCoreFSCache.dylib) Errors found! Invalidating cache...
+2026-11-12 10:56:29.206 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.232 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.256 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.287 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.321 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.327 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.340 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.351 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.362 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.364 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.371 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.382 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.426 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.429 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.439 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.452 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.499 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.503 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.511 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.522 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.526 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.538 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.567 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.569 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.576 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.614 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.667 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.668 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.674 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.697 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.725 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.727 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.738 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.765 A  iosApp[30442:14353] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.795 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:29.798 A  iosApp[30442:14352] (Metal) Metal Compiling Shader
+2026-11-12 10:56:30.049 Df iosApp[30442:14342] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:1 [9F42BE37-3867-47A3-9D6C-8D2EFEAFA0C2] (reporting strategy default)>
+2026-11-12 10:56:30.049 Df iosApp[30442:14342] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:2 [95C16F90-0523-43E4-9D16-A7C9427FC191] (reporting strategy default)>
+2026-11-12 10:56:30.049 Df iosApp[30442:14342] [com.apple.network:activity] Set activity <nw_activity 50:1 [9F42BE37-3867-47A3-9D6C-8D2EFEAFA0C2] (reporting strategy default)> as the global parent
+2026-11-12 10:56:30.049 Df iosApp[30442:14342] [com.apple.UIKit:UpdateScheduler] Target list changed: <CADisplay:LCD PurpleMain>
+2026-11-12 10:56:30.050 Df iosApp[30442:14342] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:pl.fleet.monitor-default  persistentID: A51F8031-1D16-4FC2-8909-6700A015E5F7
+2026-11-12 10:56:30.051 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:30.051 Df iosApp[30442:14342] [com.apple.Accessibility:AXCommon] Read Per-App on Init: Smart invert = (null)
+2026-11-12 10:56:30.054 A  iosApp[30442:14353] (RunningBoardServices) didChangeInheritances
+2026-11-12 10:56:30.060 Df iosApp[30442:14342] [com.apple.UIKit:EventDeferring] [0x60000290cc40] Scene target of event deferring environments did update: scene: 0x103607930; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-11-12 10:56:30.060 Df iosApp[30442:14342] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x103607930; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Apl.fleet.monitor-default
+2026-11-12 10:56:30.066 Df iosApp[30442:14342] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x103607930> (A51F8031-1D16-4FC2-8909-6700A015E5F7)
+2026-11-12 10:56:30.068 A  iosApp[30442:14353] (RunningBoardServices) didChangeInheritances
+2026-11-12 10:56:30.069 Df iosApp[30442:14342] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:pl.fleet.monitor-default  persistentID: A51F8031-1D16-4FC2-8909-6700A015E5F7
+2026-11-12 10:56:30.069 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason removed: 12; deactivation reasons: 4128 -> 32; animating application lifecycle event: 1
+2026-11-12 10:56:30.069 Df iosApp[30442:14342] [com.apple.KeyboardArbiter:Client] Send setDeactivating: N (-DeactivationReason:SuspendedEventsOnly)
+2026-11-12 10:56:30.069 Df iosApp[30442:14342] [com.apple.UIKit:Application] Deactivation reason removed: 5; deactivation reasons: 32 -> 0; animating application lifecycle event: 0
+2026-11-12 10:56:30.071 Df iosApp[30442:14342] [com.apple.KeyboardArbiter:Client] startConnection
+2026-11-12 10:56:30.073 Df iosApp[30442:14342] [com.apple.xpc:connection] [0x10360fdc0] activating connection: mach=true listener=false peer=false name=com.apple.UIKit.KeyboardManagement.hosted
+2026-11-12 10:56:30.077 Df iosApp[30442:14342] [com.apple.KeyboardArbiter:Client] handleKeyboardChange: set currentKeyboard:N (wasKeyboard:N)
+2026-11-12 10:56:30.079 Df iosApp[30442:14342] [com.apple.UIKit:KeyboardArbiterClientLog] isWritingToolsHandlingKeyboardTracking:Y (WT ready:Y, Arbiter ready:Y)
+2026-11-12 10:56:30.125 Df iosApp[30442:14342] [com.apple.network:activity] <nw_activity 50:1 [9F42BE37-3867-47A3-9D6C-8D2EFEAFA0C2] (global parent) (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 6299ms
+2026-11-12 10:56:30.125 Df iosApp[30442:14342] [com.apple.network:activity] <nw_activity 50:2 [95C16F90-0523-43E4-9D16-A7C9427FC191] (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 6299ms
+2026-11-12 10:56:30.125 Df iosApp[30442:14342] [com.apple.network:activity] Unsetting the global parent activity <nw_activity 50:1 [9F42BE37-3867-47A3-9D6C-8D2EFEAFA0C2] (global parent) (reporting strategy default) complete (reason success)>
+2026-11-12 10:56:30.125 Df iosApp[30442:14342] [com.apple.network:activity] Unset the global parent activity
+2026-11-12 10:56:30.359 A  iosApp[30442:14353] (RunningBoardServices) didChangeInheritances
+2026-11-12 10:56:44.419 Df iosApp[30442:14342] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:pl.fleet.monitor-default  persistentID: A51F8031-1D16-4FC2-8909-6700A015E5F7
+2026-11-12 10:56:47.321 Df iosApp[30442:14342] [com.apple.KeyboardArbiter:Client] RX sceneBecameFocused:(null)

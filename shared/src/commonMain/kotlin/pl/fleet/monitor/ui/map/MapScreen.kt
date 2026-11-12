@@ -342,10 +342,12 @@ private fun VehiclePreviewCard(
             }
             val status = (preview?.status as? pl.fleet.monitor.ui.details.Loadable.Ready)?.value
             val driving = status?.motion ?: (v.state == VehicleState.DRIVING)
+            // Paliwo: z pozycji, a gdy nadajnik podaje 0 – ostatni znany niezerowy odczyt.
+            val fuel = v.fuelLiters ?: telemetry?.fuel
             // Na postoju prędkość i obroty to zera – zostaje sam zegar paliwa.
             if (!driving) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ArcGauge(
-                    v.fuelLiters?.toFloat(), FUEL_MAX, v.fuelLiters?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
+                    fuel?.toFloat(), FUEL_MAX, fuel?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
                     VehicleState.PARKED.color, Modifier.weight(1f),
                 )
                 Spacer(Modifier.weight(2f))
@@ -357,7 +359,7 @@ private fun VehiclePreviewCard(
                     androidx.compose.ui.graphics.Color(0xFF1A5DBF), Modifier.weight(1f),
                 )
                 ArcGauge(
-                    v.fuelLiters?.toFloat(), FUEL_MAX, v.fuelLiters?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
+                    fuel?.toFloat(), FUEL_MAX, fuel?.let { "${Fmt.decimal(it, 0)} l" }, "paliwo",
                     VehicleState.PARKED.color, Modifier.weight(1f),
                 )
             }

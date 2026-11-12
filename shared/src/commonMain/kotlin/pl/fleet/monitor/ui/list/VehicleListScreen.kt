@@ -166,7 +166,7 @@ private fun VehicleRow(
                 ) {
                     StateBadge(v.state)
                     if (v.state == pl.fleet.monitor.data.VehicleState.DRIVING) Meta(Icons.Outlined.Speed, Fmt.speed(v.speed))
-                    v.fuelLiters?.let { Meta(Icons.Outlined.LocalGasStation, "${Fmt.decimal(it, 0)} l") }
+                    (v.fuelLiters ?: telemetry?.fuel)?.let { Meta(Icons.Outlined.LocalGasStation, "${Fmt.decimal(it, 0)} l") }
                     Meta(
                         Icons.Outlined.Schedule, Fmt.ago(v.lastPositionTime),
                         warn = Fmt.isStale(v.lastPositionTime),

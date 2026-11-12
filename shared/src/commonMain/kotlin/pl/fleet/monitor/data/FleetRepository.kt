@@ -42,14 +42,25 @@ class FleetRepository(
      */
     suspend fun latestTelemetry(serial: String): VehicleTelemetry? {
         val to = now()
+        var t: VehicleTelemetry? = null
         for (hours in listOf(2, 24)) {
             val p = routes(serial, to - hours.hours, to)
-            val last = p.lastOrNull() ?: continue
-            // Napięcie – ostatni niezerowy odczyt; sygnały – z ostatniego raportu.
-            val volts = p.lastOrNull { it.voltage != null && it.voltage > 0 }?.voltage
-            return VehicleTelemetry(volts, last.gsm, last.gps, last.time)
+            if (p.isEmpty()) continue
+            // Ostatni znany stan różny od zera – na postoju nadajnik często raportuje 0 (np. wyłączony GPS).
+            val found = VehicleTelemetry(
+                volts = p.lastOrNull { (it.voltage ?: 0.0) > 0 }?.voltage,
+                gsm = p.lastOrNull { (it.gsm ?: 0) > 0 }?.gsm,
+                gps = p.lastOrNull { (it.gps ?: 0) > 0 }?.gps,
+                time = p.last().time,
+                fuel = p.lastOrNull { (it.fuel ?: 0.0) > 0 }?.fuel,
+            )
+            // Brakujące wartości uzupełniamy z dłuższego okresu (2 h → doba).
+            t = t?.let { cur ->
+                cur.copy(volts = cur.volts ?: found.volts, gsm = cur.gsm ?: found.gsm, gps = cur.gps ?: found.gps, fuel = cur.fuel ?: found.fuel)
+            } ?: found
+            if (t.volts != null && t.gsm != null && t.gps != null && t.fuel != null) break
         }
-        return null
+        return t
     }
 
     suspend fun activitySince(serial: String, driving: Boolean): Instant? {

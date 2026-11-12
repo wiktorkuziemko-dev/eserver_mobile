@@ -468,7 +468,7 @@ fun RouteAnalysis.pointsKm(s: Int, e: Int): Double {
 }
 
 /** Stan nadajnika z ostatniego raportu: napięcie akumulatora i siła sygnałów GSM / GPS (0–31). */
-data class VehicleTelemetry(val volts: Double?, val gsm: Int?, val gps: Int?, val time: Instant)
+data class VehicleTelemetry(val volts: Double?, val gsm: Int?, val gps: Int?, val time: Instant, val fuel: Double? = null)
 
 /**
  * Siła sygnału 0–31 przeliczona na 0–4 kreski, jak w telefonie (skala CSQ modemów GSM):
